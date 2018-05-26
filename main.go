@@ -2,8 +2,8 @@ package main
 
 import "os"
 import "flag"
-import "mailru/tgrmalerter/core"
-import "mailru/tgrmalerter/core/config"
+import "bitbucket.org/mh00net/ks-installer/core"
+import "bitbucket.org/mh00net/ks-installer/core/config"
 import "github.com/rs/zerolog"
 
 var parsedConfigFile string

@@ -10,16 +10,13 @@ import (
 	"bitbucket.org/mh00net/ks-installer/app"
 	"bitbucket.org/mh00net/ks-installer/core/config"
 	"bitbucket.org/mh00net/ks-installer/core/sql"
-	"bitbucket.org/mh00net/ks-installer/core/http"
 
 	"github.com/rs/zerolog"
 )
 
 
 type Core struct {
-	http *http.HttpService
 	sql sql.SqlDriver
-	tgrm *tgrm.TgrmService
 
 	log *zerolog.Logger
 	cfg *config.CoreConfig
@@ -39,12 +36,6 @@ func (m *Core) Construct() (*Core, error) {
 
 	// internal resources configuration:
 	if m.sql,e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
-	m.app.SetSqlDriver(m.sql)
-
-	if m.tgrm,e = new(tgrm.TgrmService).SetConfig(m.cfg).SetApp(m.app).Construct(); e != nil { return nil,e }
-	m.app.SetTgBotApi(m.tgrm.GetTBot())
-
-	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(m.app.NewHttpApi())
 
 	return m,nil
 }
@@ -57,18 +48,6 @@ func (m *Core) Bootstrap() error {
 	// define global error variables:
 	var e error
 	var epipe = make(chan error)
-
-	// http service bootstrap:
-	go func(e chan error, wg sync.WaitGroup) {
-		wg.Add(1); defer wg.Done()
-		e <- m.http.Bootstrap()
-	}(epipe, m.appWg)
-
-	// tgrm service bootstrap:
-	go func(e chan error, wg sync.WaitGroup) {
-		wg.Add(1); defer wg.Done()
-		e <- m.tgrm.Bootstrap()
-	}(epipe, m.appWg)
 
 	// application bootstrap:
 	go func(e chan error, wg sync.WaitGroup) {
@@ -103,9 +82,7 @@ func (m *Core) Destruct(e *error) error {
 	m.app.Destruct()
 
 	// internal resources destruct:
-	m.http.Destruct()
 	m.sql.Destruct()
-	m.tgrm.Destruct()
 
 	m.appWg.Wait(); return *e
 }
