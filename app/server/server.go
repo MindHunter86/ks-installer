@@ -1,4 +1,4 @@
-package app
+package server
 
 import "bitbucket.org/mh00net/ks-installer/core/config"
 import "github.com/rs/zerolog"

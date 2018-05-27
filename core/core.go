@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"bitbucket.org/mh00net/ks-installer/app"
+	"bitbucket.org/mh00net/ks-installer/app/server"
 	"bitbucket.org/mh00net/ks-installer/core/config"
 	"bitbucket.org/mh00net/ks-installer/core/sql"
 
@@ -22,7 +22,7 @@ type Core struct {
 	cfg *config.CoreConfig
 
 	appWg sync.WaitGroup
-	app *app.App
+	app *server.App
 }
 
 
@@ -32,7 +32,7 @@ func (m *Core) Construct() (*Core, error) {
 	var e error
 
 	// application configuration:
-	if m.app,e = new(app.App).SetLogger(m.log).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
+	if m.app,e = new(server.App).SetLogger(m.log).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
 
 	// internal resources configuration:
 	if m.sql,e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
