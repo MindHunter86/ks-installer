@@ -1,99 +1,133 @@
 package main
 
 import "os"
-import "flag"
+import "time"
 // import "bitbucket.org/mh00net/ks-installer/client"
 // import "bitbucket.org/mh00net/ks-installer/installer"
 import "bitbucket.org/mh00net/ks-installer/core"
 import "bitbucket.org/mh00net/ks-installer/core/config"
 import "github.com/rs/zerolog"
+import "gopkg.in/urfave/cli.v1"
 
 
 var log zerolog.Logger
-const argHelp = `
-usage: ks-installer <command> [<args>]
-command list:
-	* master - command group for master instance
-		* serve - starting master serve
 
-	* server - command group for server management
-		* add - add server for future reinstallation
-		* install - command for gathering Ethernet information and starting client event loop. Used by anaconda in %pre scriptlet
-		* setup - starting base wrapper for puppet agent. Used by clean OS for first puppet runs
-`
 
 func main() {
-
-	var err error
-
-	fgMasterServeSet := flag.NewFlagSet("serve", flag.ExitOnError)
-	masterServeConfig := fgMasterServeSet.String("config", "./config.yml", "filepath to the configuration file")
-
-	fgServerAddSet := flag.NewFlagSet("add", flag.ExitOnError)
-	// serverAddHostname := fgServerAddSet.String("hostname", "", "server hostname")
-	// serverAddMAC := fgServerAddSet.String("mac", "ff:ff:ff:ff:ff:ff", "server MAC addr of the one of links")
-
-	fgServerInstall := flag.NewFlagSet("install", flag.ExitOnError)
-	// serverInstallMaster := fgServerInstall.String("master", "", "Master's IPv4 address")
-
-	fgServerSetup := flag.NewFlagSet("setup", flag.ExitOnError)
-	// serverSetupTest := fgServerSetup.String("test", "bar", "test foo=bar")
 
 	// log initialization:
 	zerolog.ErrorFieldName = "ERROR"
 	log = zerolog.New(zerolog.ConsoleWriter{
 		Out: os.Stderr }).With().Timestamp().Logger()
 
+	// define all commands && flags:
+	app := cli.NewApp()
+	app.Name = "ks-installer"
+	app.Version = "0.0.1"
+	app.Compiled = time.Now()
+	app.Authors = []cli.Author{
+		cli.Author{
+			Name: "Vadimka Komissarov",
+			Email: "v.komissarov@corp.mail.ru, vadimka_kom@mail.ru" } }
+	app.Copyright = "(c) 2018 Mindhunter and CO"
+	app.Usage = "Kickstart install manager for M***Ru PortalAdminz"
+
+	app.Commands = []cli.Command{
+		{
+			Name: "server",
+			Aliases: []string{"s"},
+			Usage: "command for server management",
+			Subcommands: []cli.Command{
+				{
+					Name: "serve",
+					Aliases: []string{"s"},
+					Usage: "start serving",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name: "config, c",
+							Usage: "Load configuration file for server from `FILE`",
+							Value: "./extras/config.yml",
+							EnvVar: "SERVER_CONFIG",
+						},
+					},
+					Action: func(c *cli.Context) error {
+
+						// stat() and parse configuration file:
+						if _,e := os.Stat(c.String("config")); e != nil { return e }
+						cfg,e := new(config.CoreConfig).Parse(c.String("config")); if e != nil { return e }
+
+						// global logger configuration:
+						switch cfg.Base.Log_Level {
+							case "off": zerolog.SetGlobalLevel(zerolog.NoLevel)
+							case "debug": zerolog.SetGlobalLevel(zerolog.DebugLevel)
+							case "info": zerolog.SetGlobalLevel(zerolog.InfoLevel)
+							case "warn": zerolog.SetGlobalLevel(zerolog.WarnLevel)
+							case "error": zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+							case "fatal": zerolog.SetGlobalLevel(zerolog.FatalLevel)
+							case "panic": zerolog.SetGlobalLevel(zerolog.PanicLevel) }
+
+						// core initialization:
+						appCore,e := new(core.Core).SetLogger(&log).SetConfig(cfg).Construct(); if e != nil { return e }
+
+						// core bootstrap:
+						return appCore.Bootstrap()
+					},
+				},
+			},
+		},
+		{
+			Name: "host",
+			Aliases: []string{"ho"},
+			Usage: "command for host management",
+			Subcommands: []cli.Command{
+				{
+					Name: "add",
+					Aliases: []string{"a"},
+					Usage: "add host for future reinstallation",
+					Category: "host",
+					Action: func(c *cli.Context) error {
+						return nil
+					},
+				},
+				{
+					Name: "install",
+					Aliases: []string{"i"},
+					Usage: "command for gathering Ethernet information and starting client event loop. Used by anaconda in %pre scriptlet",
+					Category: "host",
+					Action: func(c *cli.Context) error {
+						return nil
+					},
+				},
+				{
+					Name: "setup",
+					Aliases: []string{"s"},
+					Usage: "starting base wrapper for puppet agent. Used by clean OS for first puppet runs",
+					Category: "host",
+					Action: func(c *cli.Context) error {
+						return nil
+					},
+				},
+			},
+		},
+	}
+
 	// parse all given arguments:
-	switch {
-		case len(os.Args) <= 2: log.Print(argHelp); os.Exit(2)
-		case os.Args[1] == "master" && os.Args[2] == "serve": fgMasterServeSet.Parse(os.Args[3:])
-		case os.Args[1] == "server" && os.Args[2] == "add": fgServerAddSet.Parse(os.Args[3:])
-		case os.Args[1] == "server" && os.Args[2] == "add": fgServerInstall.Parse(os.Args[3:])
-		case os.Args[1] == "server" && os.Args[2] == "add": fgServerSetup.Parse(os.Args[3:])
-		default: log.Print(argHelp); os.Exit(2)
-	}
-
-	switch {
-		case fgMasterServeSet.Parsed():
-			if len(*masterServeConfig) == 0 {
-				log.Fatal().Msg("The Config argument cannot be empty!"); os.Exit(2) }
-
-			// read and parse config:
-			if _,e := os.Stat(*masterServeConfig); e != nil {
-				log.Fatal().Err(e).Msg("Could not stat configuration file!")
-				os.Exit(1) }
-			cfg,e := new(config.CoreConfig).Parse(*masterServeConfig); if e != nil {
-				log.Fatal().Err(e).Msg("Could not successfully complete configuration file parsing!")
-				os.Exit(1) }
-
-			// log configuration:
-			switch cfg.Base.Log_Level {
-				case "off": zerolog.SetGlobalLevel(zerolog.NoLevel)
-				case "debug": zerolog.SetGlobalLevel(zerolog.DebugLevel)
-				case "info": zerolog.SetGlobalLevel(zerolog.InfoLevel)
-				case "warn": zerolog.SetGlobalLevel(zerolog.WarnLevel)
-				case "error": zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-				case "fatal": zerolog.SetGlobalLevel(zerolog.FatalLevel)
-				case "panic": zerolog.SetGlobalLevel(zerolog.PanicLevel) }
-
-			// core initialization:
-			core,e := new(core.Core).SetLogger(&log).SetConfig(cfg).Construct(); if e != nil {
-				log.Fatal().Err(e).Msg("Could not successfully complete the Costruct method!")
-				os.Exit(1) }
-
-			err = core.Bootstrap()
-
-		case fgServerAddSet.Parsed():
-		case fgServerInstall.Parsed():
-		case fgServerSetup.Parsed():
-		default: log.Print("fuckit")
-	}
+	if e := app.Run(os.Args); e != nil { log.Fatal().Err(e).Msg("Could not run the App!") }
+}
 
 
-	// check subprogram errors and exit:
-	if err != nil {
-		log.Fatal().Err(err).Msg("Abnormal program result!"); os.Exit(1)
-	} else {
-		log.Debug().Msg("Program completed successfully!"); os.Exit(0) }
+func old_main() {
+
+	// fgMasterServeSet := flag.NewFlagSet("serve", flag.ExitOnError)
+	// masterServeConfig := fgMasterServeSet.String("config", "./config.yml", "filepath to the configuration file")
+
+	// fgServerAddSet := flag.NewFlagSet("add", flag.ExitOnError)
+	// serverAddHostname := fgServerAddSet.String("hostname", "", "server hostname")
+	// serverAddMAC := fgServerAddSet.String("mac", "ff:ff:ff:ff:ff:ff", "server MAC addr of the one of links")
+
+	// fgServerInstall := flag.NewFlagSet("install", flag.ExitOnError)
+	// serverInstallMaster := fgServerInstall.String("master", "", "Master's IPv4 address")
+
+	// fgServerSetup := flag.NewFlagSet("setup", flag.ExitOnError)
+	// serverSetupTest := fgServerSetup.String("test", "bar", "test foo=bar")
 }
