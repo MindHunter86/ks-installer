@@ -9,6 +9,7 @@ import (
 
 	"bitbucket.org/mh00net/ks-installer/app/server"
 	"bitbucket.org/mh00net/ks-installer/core/config"
+	"bitbucket.org/mh00net/ks-installer/core/http"
 	"bitbucket.org/mh00net/ks-installer/core/sql"
 
 	"github.com/rs/zerolog"
@@ -17,6 +18,7 @@ import (
 
 type Core struct {
 	sql sql.SqlDriver
+	http *http.HttpService
 
 	log *zerolog.Logger
 	cfg *config.CoreConfig
@@ -37,6 +39,8 @@ func (m *Core) Construct() (*Core, error) {
 	// internal resources configuration:
 	if m.sql,e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
 
+	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
+
 	return m,nil
 }
 
@@ -48,6 +52,12 @@ func (m *Core) Bootstrap() error {
 	// define global error variables:
 	var e error
 	var epipe = make(chan error)
+
+	// http service bootstrap:
+	go func(e chan error, wg sync.WaitGroup) {
+		wg.Add(1); defer wg.Done()
+		e <- m.http.Bootstrap()
+	}(epipe, m.appWg)
 
 	// application bootstrap:
 	go func(e chan error, wg sync.WaitGroup) {
@@ -82,6 +92,7 @@ func (m *Core) Destruct(e *error) error {
 	m.app.Destruct()
 
 	// internal resources destruct:
+	m.http.Destruct()
 	m.sql.Destruct()
 
 	m.appWg.Wait(); return *e

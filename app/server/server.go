@@ -1,5 +1,6 @@
 package server
 
+import "database/sql"
 import "bitbucket.org/mh00net/ks-installer/core/config"
 import "github.com/rs/zerolog"
 
@@ -12,6 +13,8 @@ const appVersion = "0.1"
 var (
 	globLogger *zerolog.Logger
 	globConfig *config.CoreConfig
+	globApi *apiController
+	globSqlDB *sql.DB
 )
 
 type App struct {}

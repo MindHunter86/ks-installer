@@ -9,12 +9,15 @@ import (
 type CoreConfig struct {
 	Base struct {
 		Log_Level string
+		Http struct {
+			Listen, Host string
+			Read_Timeout, Write_Timeout int }
+		Api struct {
+			Sign_Secret string }
 		Mysql struct {
-			Host string
-			Username, Password, Database string
-			Migrations_Path string
 			Sql_Debug bool
-		}
+			Host, Username, Password, Database string
+			Migrations_Path string }
 	}
 }
 
