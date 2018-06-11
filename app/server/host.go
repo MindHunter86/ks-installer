@@ -128,7 +128,7 @@ func (m *hostModel) createNewHost(ipmiIp *string) *baseHost {
 		m.handleError(e,errInternalCommonError, "[HOST] Bytes buffer - could not read from buffer!")
 		return nil }
 
-	if ! bytes.Equal(globConfig.Base.Ipmi.Hostname_Tld, buf.Bytes()) {
+	if ! bytes.Equal([]byte(globConfig.Base.Ipmi.Hostname_Tld), buf.Bytes()) {
 		m.handleError(nil, errHostsIpmiTldMismatch, "[HOST]: Top-level domain of the resolved IPMI hostname does not match the configuration!")
 		return nil }
 

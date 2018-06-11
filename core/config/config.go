@@ -19,9 +19,8 @@ type CoreConfig struct {
 			Host, Username, Password, Database string
 			Migrations_Path string }
 		Ipmi struct {
-			Hostname_Tld []byte
-			CIDR_Block string
-		}
+			Hostname_Tld string
+			CIDR_Block string }
 	}
 }
 
