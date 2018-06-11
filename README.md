@@ -1,3 +1,3 @@
-# TgrmAlrter v2
+# Ks-installer
 
-HTTP API for sending messages in telegram
+Kickstart manager for faster server setup
