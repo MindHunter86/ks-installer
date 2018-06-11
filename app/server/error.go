@@ -9,9 +9,14 @@ const (
 	errNotError = uint8(iota)
 	errInternalCommonError
 	errInternalSqlError
-	errAlertsNotAuthorized
-	errAlertsUnknownApiFormat
-	errAlertsUnknownType
+	errApiNotAuthorized
+	errApiUnknownApiFormat
+	errApiUnknownType
+	errHostsAmbiguousResolver
+	errHostsAbnormalMac
+	errHostsAbnormalIp
+	errHostsIpmiTldMismatch
+	errHostsIpmiCidrMismatch
 
 	// telegram errors:
 	errTgUnknownCommand = uint8(iota)
@@ -25,25 +30,40 @@ var (
 		errNotError: "",
 		errInternalCommonError: "Internal error",
 		errInternalSqlError: "Internal database error",
-		errAlertsNotAuthorized: "Authorization failed",
-		errAlertsUnknownApiFormat: "Unknown API request format",
-		errAlertsUnknownType: "Unknown request type",
+		errApiNotAuthorized: "Authorization failed",
+		errApiUnknownApiFormat: "Unknown API request format",
+		errApiUnknownType: "Unknown request type",
+		errHostsAmbiguousResolver: "Ambiguous resolver answer",
+		errHostsAbnormalMac: "Abnormal MAC address",
+		errHostsAbnormalIp: "Abnormal IP address",
+		errHostsIpmiTldMismatch: "Ipmi hostname tld mismatch",
+		errHostsIpmiCidrMismatch: "Ipmi CIDR mismatch",
 	}
 	apiErrorsDetail = map[uint8]string{
 		errNotError: "",
 		errInternalCommonError: "The current request could not processed! Please, try again later!",
 		errInternalSqlError: "The current request could not processed due to a database error. Please, try again later!",
-		errAlertsNotAuthorized: "The current request must be signed with a special key for correct authorization! Please, check your credentials!",
-		errAlertsUnknownApiFormat: "Could not parse request! Please read the documentation and try again!",
-		errAlertsUnknownType: "The current request has a type that was sent incorrectly!",
+		errApiNotAuthorized: "The current request must be signed with a special key for correct authorization! Please, check your credentials!",
+		errApiUnknownApiFormat: "Could not parse request! Please read the documentation and try again!",
+		errApiUnknownType: "The current request has a type that was sent incorrectly!",
+		errHostsAmbiguousResolver: "The given ip address has two or more PTR records! Fix DNS records and try again later!",
+		errHostsAbnormalMac: "The MAC address must be in the format \"ff:ff:ff:ff:ff:ff\"",
+		errHostsAbnormalIp: "The IP address must be in the format \"255.255.255.255\"",
+		errHostsIpmiTldMismatch: "The resolved top-level domain of the ipmi (TLD) does not match the configuration. Correct this discrepancy in the configuration file and try again!",
+		errHostsIpmiCidrMismatch: "The given ipmi address is not included to the configured ipmi CIDR block! Correct this discrepancy in the configuration file and try again!",
 	}
 	apiErrorsStatus = map[uint8]int{
 		errNotError: 0,
 		errInternalCommonError: http.StatusInternalServerError,
 		errInternalSqlError: http.StatusInternalServerError,
-		errAlertsNotAuthorized: http.StatusUnauthorized,
-		errAlertsUnknownApiFormat: http.StatusBadRequest,
-		errAlertsUnknownType: http.StatusBadRequest,
+		errApiNotAuthorized: http.StatusUnauthorized,
+		errApiUnknownApiFormat: http.StatusBadRequest,
+		errApiUnknownType: http.StatusBadRequest,
+		errHostsAmbiguousResolver: http.StatusBadRequest,
+		errHostsAbnormalMac: http.StatusBadRequest,
+		errHostsAbnormalIp: http.StatusBadRequest,
+		errHostsIpmiTldMismatch: http.StatusBadRequest,
+		errHostsIpmiCidrMismatch: http.StatusBadRequest,
 	}
 
 	// telegram errors:
@@ -61,6 +81,12 @@ type apiError struct {
 
 func (m *apiError) setError(e uint8) *apiError { m.e = e; return m }
 func (m *apiError) setParameter(p string) *apiError { m.srcParam = p; return m }
+
+func (m *apiError) log(e error, msg string) *apiError {
+	globLogger.Error().Err(e).Msg(msg)
+	return m
+}
+
 func (m *apiError) getId() string {
 	if len(m.eId) == 0 { m.eId = uuid.NewV4().String() }
 	return m.eId

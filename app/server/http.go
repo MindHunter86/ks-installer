@@ -1,5 +1,6 @@
 package server
 
+import "time"
 import "encoding/hex"
 import "crypto/sha256"
 import "crypto/hmac"
@@ -29,12 +30,39 @@ type (
 	responseData struct {
 		Type string                 `json:"type,omitempty"`
 		Id string                   `json:"id,omitempty"`
-		Attributes *dataAttributes  `json:"attributes,omitempty"`
+		JobAttributes *dataJobAttributes `json:"attributes,omitempty"`
+		HostAttributes *dataHostAttributes `json:"attributes,omitempty"`
 		Links *dataLinks            `json:"links,omitempty"`
 	}
-	dataAttributes struct {
-		// attributes for hosts or job
+	dataHostAttributes struct {
+		Hostid string                `json:"hostid,omitempty"`
+		Ipmi *hostAttributesIpmi		 `json:"ipmi,omitempty"`
+		Ports []*hostAttributesPorts `json:"ports,omitempty"`
+		Jobs []string
+		Updated_At *time.Time        `json:"updated_at,omitempty"`
+		Created_At *time.Time        `json:"created_at,omitempty"`
 	}
+	hostAttributesIpmi struct {
+		Ptr_Name string              `json:"ptr_name,omitempty"`
+		Ip_Address string            `json:"ip_address,omitempty"`
+	}
+	hostAttributesPorts struct {
+		Name string                  `json:"name,omitempty"`
+		Jun uint16                   `json:"jun,omitempty"`
+		Vlan uint16									 `json:"vlan,omitempty"`
+		Mac string                   `json:"mac,omitempty"`
+		Updated_At *time.Time        `json:"updated_at,omitempty"`
+	}
+	hostAttributesJobs struct {
+		Id int                       `json:"id,omitempty"`
+		Payload *jobsPayload         `json:"payload,omitempty"`
+		Created_At *time.Time        `json:"created_at,omitempty"`
+	}
+	jobsPayload struct {
+		Name string                  `json:"name,omitempty"`
+		// TODO: add attrs for jobs!
+	}
+	dataJobAttributes struct {}
 	dataLinks struct {
 		Self string                 `json:"self,omitempty"`
 	}
@@ -52,12 +80,12 @@ type (
 	}
 
 	// JSON request structs:
-	apiPostRequest struct {
-		Data *requestData           `json:"data"`
+	apiHostPostRequest struct {
+		Data *hostRequestData       `json:"data"`
 	}
-	requestData struct {
+	hostRequestData struct {
 		Type string                 `json:"type"`
-		Attributes *dataAttributes  `json:"attributes"`
+		Attributes *dataHostAttributes `json:"attributes"`
 	}
 
 	// JSON meta information:
@@ -94,12 +122,10 @@ func NewApiController() *mux.Router {
 
 	s := r.PathPrefix("/v1").Headers("Content-Type", "application/vnd.api+json").Subrouter()
 	s.Use(globApi.httpMiddlewareAPIAuthentication)
-	// Сущности апи:
-	// - host
-	// - job
-	// Example from tgrmalerter:
-	// s.HandleFunc("/alerts", m.httpHandlerAlertsCreate).Methods("POST")
-	// s.HandleFunc("/alerts/{id:[0-9]+}", m.httpHandlerAlertsGet).Methods("GET")
+
+	// XXX
+	// s.HandleFunc("/host/{mac:^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$}", m.httpHandlerHostGet).Methods("GET")
+	// s.HandleFunc("/host", m.httpHandlerHostCreate).Methods("POST")
 
 	return r
 }
@@ -141,7 +167,7 @@ func (m *apiController) httpMiddlewareAPIAuthentication(h http.Handler) http.Han
 		globLogger.Debug().Str("mac_received", strings.Split(r.Header.Get("Authorization"), " ")[1]).Msg("[API]: HMAC signs comparison")
 
 		if ! hmac.Equal(expectedMAC, receivedMAC) {
-			req.newError(errAlertsNotAuthorized)
+			req.newError(errApiNotAuthorized)
 			m.respondJSON(w, req, nil, 0); return }
 
 		r.Body = ioutil.NopCloser(bytes.NewReader(bodyBuf.Bytes()))
@@ -151,6 +177,61 @@ func (m *apiController) httpMiddlewareAPIAuthentication(h http.Handler) http.Han
 
 
 func (m *apiController) httpHandlerRootV1(w http.ResponseWriter, r *http.Request) {}
+
+func (m *apiController) httpHandlerHostGet(w http.ResponseWriter, r *http.Request) {
+	var req = context.Get(r, "internal_request").(*httpRequest)
+	vars := mux.Vars(r)
+
+	if vars["mac"] == "" {
+		req.newError(errApiUnknownApiFormat)
+		m.respondJSON(w, req, nil, 0); return }
+
+	// TODO: get host by MAC from host.go
+}
+
+func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Request) {
+
+	var req = context.Get(r, "internal_request").(*httpRequest)
+
+	var postRequest *apiHostPostRequest
+	rspBody,e := ioutil.ReadAll(r.Body); if !m.errorHandler(w,e,req) { return }
+	e = json.Unmarshal(rspBody, &postRequest); if !m.errorHandler(w,e,req) { return }
+
+	switch {
+		case postRequest.Data == nil:
+			fallthrough
+		case postRequest.Data.Type == "":
+			fallthrough
+		case postRequest.Data.Attributes == nil:
+			fallthrough
+		case postRequest.Data.Attributes.Ports == nil:
+			fallthrough
+		case len(postRequest.Data.Attributes.Ports) == 0:
+			fallthrough
+		case postRequest.Data.Attributes.Ipmi.Ip_Address == "":
+			fallthrough
+		case false: // something impossible
+			req.newError(errApiUnknownApiFormat)
+			m.respondJSON(w, req, nil, 0); return
+		case postRequest.Data.Type != "alerts":
+			req.newError(errApiUnknownType)
+			m.respondJSON(w, req, nil, 0); return
+		default:
+			globLogger.Debug().Msg("[API]: data checker is OK!")
+	}
+
+	var macs []string
+	for _,v := range postRequest.Data.Attributes.Ports {
+		if v.Mac == "" {
+			req.newError(errHostsAbnormalMac)
+			m.respondJSON(w, req, nil, 0); return }
+		macs = append(macs, v.Mac)
+	}
+
+	context.Set(r, "param_ipmi_ip", postRequest.Data.Attributes.Ipmi.Ip_Address)
+	context.Set(r, "param_macs", macs)
+
+}
 
 func (m *apiController) errorHandler(w http.ResponseWriter, e error, req *httpRequest) bool {
 	if e == nil { return true }

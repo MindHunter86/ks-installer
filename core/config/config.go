@@ -18,6 +18,10 @@ type CoreConfig struct {
 			Sql_Debug bool
 			Host, Username, Password, Database string
 			Migrations_Path string }
+		Ipmi struct {
+			Hostname_Tld []byte
+			CIDR_Block string
+		}
 	}
 }
 
