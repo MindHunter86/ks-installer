@@ -126,6 +126,7 @@ func NewApiController() *mux.Router {
 	// XXX
 	// s.HandleFunc("/host/{mac:^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$}", m.httpHandlerHostGet).Methods("GET")
 	// s.HandleFunc("/host", m.httpHandlerHostCreate).Methods("POST")
+	s.HandleFunc("/", globApi.httpHandlerRootV1).Methods("GET")
 
 	return r
 }
@@ -152,6 +153,9 @@ func (m *apiController) httpMiddlewareAPIAuthentication(h http.Handler) http.Han
 		var bodyBuf bytes.Buffer
 		bufSize,e := bodyBuf.ReadFrom(r.Body); if !m.errorHandler(w,e,req) { return }
 		r.Body.Close()
+
+		globLogger.Debug().Str("body", bodyBuf.String()).Msg("")
+		globLogger.Debug().Bytes("body", bodyBuf.Bytes()).Msg("")
 
 		mac := hmac.New(sha256.New, []byte(globConfig.Base.Api.Sign_Secret))
 		macSize,e := mac.Write(bodyBuf.Bytes()); if !m.errorHandler(w,e,req) { return }

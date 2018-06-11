@@ -36,3 +36,4 @@ func (m *App) Destruct() error {
 // Helper methods:
 func (m *App) SetLogger(l *zerolog.Logger) (*App) { globLogger = l; return m }
 func (m *App) SetConfig(c *config.CoreConfig) (*App) { globConfig = c; return m }
+func (m *App) SetSqlDb(s *sql.DB) (*App) { globSqlDB = s; return m }

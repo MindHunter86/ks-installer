@@ -38,6 +38,7 @@ func (m *Core) Construct() (*Core, error) {
 
 	// internal resources configuration:
 	if m.sql,e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
+	m.app.SetSqlDb(m.sql.GetRawDBSession())
 
 	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
 
@@ -45,6 +46,7 @@ func (m *Core) Construct() (*Core, error) {
 }
 
 func (m *Core) Bootstrap() error {
+
 	// define kernel signal catcher:
 	var kernSignal = make(chan os.Signal)
 	signal.Notify(kernSignal, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGQUIT)
@@ -62,7 +64,7 @@ func (m *Core) Bootstrap() error {
 	// application bootstrap:
 	go func(e chan error, wg sync.WaitGroup) {
 		wg.Add(1); defer wg.Done()
-		epipe <- m.app.Bootstrap()
+		//epipe <- m.app.Bootstrap()
 	}(epipe, m.appWg)
 
 	// main application event loop:
