@@ -10,11 +10,6 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
 -- -----------------------------------------------------
 -- Schema ks-installer
 -- -----------------------------------------------------
-DROP SCHEMA IF EXISTS `ks-installer` ;
-
--- -----------------------------------------------------
--- Schema ks-installer
--- -----------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS `ks-installer` DEFAULT CHARACTER SET utf8 ;
 USE `ks-installer` ;
 
@@ -71,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `ks-installer`.`requests` (
   `url` VARCHAR(32) NOT NULL,
   `status` SMALLINT(2) NOT NULL,
   `user_agent` VARCHAR(128) NOT NULL,
-  `requested_at` TIMESTAMP(4) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `requested_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
