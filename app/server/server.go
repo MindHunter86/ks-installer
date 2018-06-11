@@ -15,21 +15,28 @@ var (
 	globConfig *config.CoreConfig
 	globApi *apiController
 	globSqlDB *sql.DB
+	globQueueChan chan *queueJob
 )
 
-type App struct {}
+type App struct {
+	queueDp *queueDispatcher
+}
 
 
 // Common methods:
 func (m *App) Construct() (*App, error) {
+	m.queueDp = newQueueDispatcher()
+	globQueueChan = m.queueDp.getQueueChan()
 	return m,nil
 }
 
 func (m *App) Bootstrap() error {
+	m.queueDp.bootstrap()
 	return nil
 }
 
 func (m *App) Destruct() error {
+	m.queueDp.destruct()
 	return nil
 }
 

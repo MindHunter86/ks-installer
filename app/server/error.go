@@ -79,6 +79,12 @@ type apiError struct {
 	srcParam string
 }
 
+func newApiError(e uint8) *apiError {
+	return &apiError{
+		e: e,
+	}
+}
+
 func (m *apiError) setError(e uint8) *apiError { m.e = e; return m }
 func (m *apiError) setParameter(p string) *apiError { m.srcParam = p; return m }
 

@@ -21,6 +21,10 @@ type CoreConfig struct {
 		Ipmi struct {
 			Hostname_Tld string
 			CIDR_Block string }
+		Queue struct {
+			Workers int
+			Worker_Capacity int
+			Chain_Buffer int }
 	}
 }
 

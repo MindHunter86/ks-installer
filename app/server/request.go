@@ -2,7 +2,6 @@ package server
 
 import "strings"
 import "net/http"
-import "database/sql"
 import _ "github.com/go-sql-driver/mysql"
 import "github.com/satori/go.uuid"
 
@@ -62,25 +61,18 @@ func (m *httpRequest) respondApiErrors() ([]*responseError, int) {
 }
 
 func (m *httpRequest) saveErrors() *httpRequest {
-	stmt,e := globSqlDB.Prepare("INSERT INTO errors VALUES (?,?,?,?,?,?,?,?)"); if e != nil {
+	stmt,e := globSqlDB.Prepare("INSERT INTO errors (id,request_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?)"); if e != nil {
 		globLogger.Error().Err(e).Msg("[REQUEST]: Could not prepare DB statement!")
 		m.newError(errInternalSqlError)
 		return m }
 	defer stmt.Close()
 
 	for _,v := range m.errors {
-			globLogger.Info().Str("request_link", m.link).Int("http_code", apiErrorsStatus[v.e]).Str("error_id", v.getId()).Str("error_title", apiErrorsTitle[v.e]).Msg("[REQUEST]: ")
+			globLogger.Info().Str("request_link", m.link).Int("http_code", apiErrorsStatus[v.e]).Str("error_id", v.getId()).Str("error_title", apiErrorsTitle[v.e]).Msg("[REQUEST]:")
 
-		_,e = stmt.Exec(v.getId(), m.id, v.e, apiErrorsStatus[v.e], m.getSqlNullString(v.srcParam), m.link, apiErrorsTitle[v.e], apiErrorsDetail[v.e]); if e != nil {
+		_,e = stmt.Exec(v.getId(), m.id, v.e, apiErrorsTitle[v.e], apiErrorsDetail[v.e]); if e != nil {
 			globLogger.Error().Err(e).Str("error_id", v.getId()).Msg("[REQUEST]: Could not write error report!") }
 	}
 
 	return m
-}
-
-func (m *httpRequest) getSqlNullString(s string) *sql.NullString {
-	if len(s) == 0 { return &sql.NullString{} }
-	return &sql.NullString{
-		String: s,
-		Valid: true }
 }
