@@ -96,7 +96,7 @@ func (m *hostModel) createNewHost(ipmiIp *string) *baseHost {
 
 	var host = newHost(m.request)
 
-	if host.ipmi_address = host.parseIpmiAddress(ipmiIp); host.ipmi_address == nil {
+	if ! host.parseIpmiAddress(ipmiIp) {
 		return nil }
 
 	var buf bytes.Buffer

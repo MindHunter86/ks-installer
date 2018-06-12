@@ -133,6 +133,8 @@ func NewApiController() *mux.Router {
 	s.HandleFunc("/host", globApi.httpHandlerHostCreate).Methods("POST")
 
 	s.HandleFunc("/job/{id:(?:[0-9a-f]{8}-)(?:[0-9a-f]{4}-){3}(?:[0-9a-f]{12})}", globApi.httpHandlerJobGet).Methods("GET")
+	// TODO: reload the job if it does not work (failed
+	// /v1/job/UUID?try_again=1
 
 	return r
 }
@@ -263,9 +265,8 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		macs = append(macs, v.Mac)
 	}
 
-	host := newHost(req)
-	host.ipmi_address = host.parseIpmiAddress(&postRequest.Data.Attributes.Ipmi.Ip_Address)
-	if host.ipmi_address == nil {
+	var host = newHost(req)
+	if ! host.parseIpmiAddress(&postRequest.Data.Attributes.Ipmi.Ip_Address) {
 		m.respondJSON(w, req, nil, 0); return }
 
 	// TODO INPUT LOGICAL TEST

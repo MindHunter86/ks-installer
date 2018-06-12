@@ -29,22 +29,23 @@ func (m *baseHost) handleError(e error, err uint8, msg string) {
 	m.req.newError(err).log(e, msg)
 }
 
-func (m *baseHost) parseIpmiAddress(ipmiIp *string) *net.IP {
+func (m *baseHost) parseIpmiAddress(ipmiIp *string) bool {
 
 	var ipmiAddr = net.ParseIP(*ipmiIp)
 	if ipmiAddr == nil {
 		m.handleError(nil, errHostsAbnormalIp, "[HOST]: Could not parse the given IP address!")
-		return nil }
+		return false }
 
 	_,ipmiBlock,e := net.ParseCIDR(globConfig.Base.Ipmi.CIDR_Block); if e != nil {
 		m.handleError(e, errInternalCommonError, "[HOST]: Could not parse configured ipmi CIDR block!")
-		return nil }
+		return false }
 
 	if ! ipmiBlock.Contains(ipmiAddr) {
 		m.handleError(nil, errHostsIpmiCidrMismatch, "[HOST] The configured CIDR does not include this IP address!")
-		return nil }
+		return false }
 
-	return &ipmiAddr
+	m.ipmi_address = &ipmiAddr
+	return true
 }
 
 func (m *baseHost) resolveIpmiHostname() string {

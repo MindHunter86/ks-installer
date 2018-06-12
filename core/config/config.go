@@ -25,6 +25,12 @@ type CoreConfig struct {
 			Workers int
 			Worker_Capacity int
 			Chain_Buffer int }
+		Rsview struct {
+			Url string
+			Authentication struct {
+				Login, Password string
+				Test_String string }
+		}
 	}
 }
 
