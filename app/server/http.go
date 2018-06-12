@@ -129,7 +129,7 @@ func NewApiController() *mux.Router {
 
 	s.HandleFunc("/", globApi.httpHandlerRootV1).Methods("GET")
 
-	s.HandleFunc("/host/{mac:^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})$}", globApi.httpHandlerHostGet).Methods("GET")
+	s.HandleFunc("/host/{mac:(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})}", globApi.httpHandlerHostGet).Methods("GET")
 	s.HandleFunc("/host", globApi.httpHandlerHostCreate).Methods("POST")
 
 	s.HandleFunc("/job/{id:(?:[0-9a-f]{8}-)(?:[0-9a-f]{4}-){3}(?:[0-9a-f]{12})}", globApi.httpHandlerJobGet).Methods("GET")
