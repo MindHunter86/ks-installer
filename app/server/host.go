@@ -20,18 +20,13 @@ type (
 
 func newHost(r *httpRequest) *baseHost {
 	return &baseHost{
+		id: uuid.NewV4().String(),
 		req: r,
 	}
 }
 
 func (m *baseHost) handleError(e error, err uint8, msg string) {
 	m.req.newError(err).log(e, msg)
-}
-
-func (m *baseHost) genId() string {
-	if m.id == "" {
-		m.id = uuid.NewV4().String() }
-	return m.id
 }
 
 func (m *baseHost) parseIpmiAddress(ipmiIp *string) *net.IP {

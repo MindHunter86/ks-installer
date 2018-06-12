@@ -12,4 +12,6 @@ type basePort struct {
 }
 
 
-//
+func newPort(r *httpRequest) *basePort {
+	return &basePort{}
+}

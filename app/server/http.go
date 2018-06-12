@@ -210,7 +210,7 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 				Updated_At: jb.updated_at.String(),
 				Created_At: jb.created_at.String(),
 			},
-		}}, 200)
+		}}, http.StatusOK)
 }
 
 func (m *apiController) httpHandlerHostGet(w http.ResponseWriter, r *http.Request) {
@@ -248,7 +248,7 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		case false: // something impossible
 			req.newError(errApiUnknownApiFormat)
 			m.respondJSON(w, req, nil, 0); return
-		case postRequest.Data.Type != "alerts":
+		case postRequest.Data.Type != "host":
 			req.newError(errApiUnknownType)
 			m.respondJSON(w, req, nil, 0); return
 		default:
@@ -263,9 +263,37 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		macs = append(macs, v.Mac)
 	}
 
-	context.Set(r, "param_ipmi_ip", postRequest.Data.Attributes.Ipmi.Ip_Address)
-	context.Set(r, "param_macs", macs)
+	host := newHost(req)
+	host.ipmi_address = host.parseIpmiAddress(&postRequest.Data.Attributes.Ipmi.Ip_Address)
+	if host.ipmi_address == nil {
+		m.respondJSON(w, req, nil, 0); return }
 
+	// TODO INPUT LOGICAL TEST
+
+	job,e := newQueueJob(&req.id, jobActRequestHostCreate); if e != nil {
+		req.newError(errInternalCommonError).log(e, "[HTTP]: Could not create job!")
+		m.respondJSON(w, req, nil, 0); return }
+
+	job.setPayload(&map[string]interface{}{
+		"job_input_host": host,
+		"job_input_macs": macs })
+
+	job.addToQueue()
+
+	m.respondJSON(w, req, &responseData{
+		Type: "job",
+		Id: req.id,
+		JobAttributes: &dataJobAttributes{
+			Job: &jobAttributesJob{
+				Id: job.id,
+				Payload: &jobsPayload{
+					Action: jobActHumanDetail[job.action],
+					State: jobStatusHumanDetail[job.state],
+				},
+				Updated_At: job.updated_at.String(),
+				Created_At: job.created_at.String(),
+			},
+		}}, http.StatusCreated)
 }
 
 func (m *apiController) errorHandler(w http.ResponseWriter, e error, req *httpRequest) bool {

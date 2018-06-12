@@ -116,7 +116,6 @@ func (m *hostModel) createNewHost(ipmiIp *string) *baseHost {
 		return nil }
 
 	host.hostname = string(bufBytes[:len(bufBytes)-1])
-	host.id = host.genId()
 	globLogger.Info().Str("id", host.id).Str("hostname", host.hostname).Msg("[HOST]: New host has been created!")
 
 	// TODO: Host save
