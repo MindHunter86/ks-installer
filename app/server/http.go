@@ -30,15 +30,14 @@ type (
 	responseData struct {
 		Type string                 `json:"type,omitempty"`
 		Id string                   `json:"id,omitempty"`
-		JobAttributes *dataJobAttributes `json:"attributes,omitempty"`
-		HostAttributes *dataHostAttributes `json:"attributes,omitempty"`
-		Links *dataLinks            `json:"links,omitempty"`
+		JobAttributes *dataJobAttributes `json:"attributes,omitempty"` // BUG: json attributes duplicate!
+		HostAttributes *dataHostAttributes `json:"attributes1,omitempty"` // TODO: refactor needed!
 	}
 	dataHostAttributes struct {
 		Hostid string                `json:"hostid,omitempty"`
 		Ipmi *hostAttributesIpmi		 `json:"ipmi,omitempty"`
 		Ports []*hostAttributesPorts `json:"ports,omitempty"`
-		Jobs []string
+//	Jobs []string
 		Updated_At *time.Time        `json:"updated_at,omitempty"`
 		Created_At *time.Time        `json:"created_at,omitempty"`
 	}
@@ -49,22 +48,28 @@ type (
 	hostAttributesPorts struct {
 		Name string                  `json:"name,omitempty"`
 		Jun uint16                   `json:"jun,omitempty"`
-		Vlan uint16									 `json:"vlan,omitempty"`
+		Vlan uint16                  `json:"vlan,omitempty"`
 		Mac string                   `json:"mac,omitempty"`
 		Updated_At *time.Time        `json:"updated_at,omitempty"`
 	}
 	hostAttributesJobs struct {
-		Id int                       `json:"id,omitempty"`
+		Id string                    `json:"id,omitempty"`
 		Payload *jobsPayload         `json:"payload,omitempty"`
-		Created_At *time.Time        `json:"created_at,omitempty"`
+		Updated_At string            `json:"updated_at,omitempty"`
+		Created_At string            `json:"created_at,omitempty"`
+	}
+	dataJobAttributes struct {
+		Job *jobAttributesJob        `json:"job,omitempty"`
+	}
+	jobAttributesJob struct {
+		Id string                    `json:"id,omitempty"`
+		Payload *jobsPayload         `json:"payload,omitempty"`
+		Updated_At string            `json:"updated_at,omitempty"`
+		Created_At string            `json:"created_at,omitempty"`
 	}
 	jobsPayload struct {
-		Name string                  `json:"name,omitempty"`
-		// TODO: add attrs for jobs!
-	}
-	dataJobAttributes struct {}
-	dataLinks struct {
-		Self string                 `json:"self,omitempty"`
+		Action string                `json:"action,omitempty"`
+		State string                 `json:"state,omitempty"`
 	}
 	responseError struct {
 		Id string                   `json:"id,omitempty"`
@@ -73,7 +78,6 @@ type (
 		Title string                `json:"title,omitempty"`
 		Detail string               `json:"detail,omitempty"`
 		Source *errorSource         `json:"source,omitempty"`
-		Links *dataLinks            `json:"links,omitempty"`
 	}
 	errorSource struct {
 		Parameter string            `json:"parameter,omitempty"`
@@ -123,10 +127,12 @@ func NewApiController() *mux.Router {
 	s := r.PathPrefix("/v1").Headers("Content-Type", "application/vnd.api+json").Subrouter()
 	s.Use(globApi.httpMiddlewareAPIAuthentication)
 
-	// XXX
-	// s.HandleFunc("/host/{mac:^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$}", m.httpHandlerHostGet).Methods("GET")
-	// s.HandleFunc("/host", m.httpHandlerHostCreate).Methods("POST")
 	s.HandleFunc("/", globApi.httpHandlerRootV1).Methods("GET")
+
+	s.HandleFunc("/host/{mac:^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})$}", globApi.httpHandlerHostGet).Methods("GET")
+	s.HandleFunc("/host", globApi.httpHandlerHostCreate).Methods("POST")
+
+	s.HandleFunc("/job/{id:(?:[0-9a-f]{8}-)(?:[0-9a-f]{4}-){3}(?:[0-9a-f]{12})}", globApi.httpHandlerJobGet).Methods("GET")
 
 	return r
 }
@@ -154,9 +160,6 @@ func (m *apiController) httpMiddlewareAPIAuthentication(h http.Handler) http.Han
 		bufSize,e := bodyBuf.ReadFrom(r.Body); if !m.errorHandler(w,e,req) { return }
 		r.Body.Close()
 
-		globLogger.Debug().Str("body", bodyBuf.String()).Msg("")
-		globLogger.Debug().Bytes("body", bodyBuf.Bytes()).Msg("")
-
 		mac := hmac.New(sha256.New, []byte(globConfig.Base.Api.Sign_Secret))
 		macSize,e := mac.Write(bodyBuf.Bytes()); if !m.errorHandler(w,e,req) { return }
 
@@ -181,6 +184,34 @@ func (m *apiController) httpMiddlewareAPIAuthentication(h http.Handler) http.Han
 
 
 func (m *apiController) httpHandlerRootV1(w http.ResponseWriter, r *http.Request) {}
+
+func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request) {
+
+	var req = context.Get(r, "internal_request").(*httpRequest)
+	var vars = mux.Vars(r)
+
+	if vars["id"] == "" {
+		req.newError(errApiUnknownApiFormat)
+		m.respondJSON(w, req, nil, 0); return }
+
+	context.Set(r, "param_jobid", vars["id"])
+	jb := getJobById(r); if jb == nil { m.respondJSON(w, req, nil, 0); return }
+
+	m.respondJSON(w, req, &responseData{
+		Type: "job",
+		Id: req.id,
+		JobAttributes: &dataJobAttributes{
+			Job: &jobAttributesJob{
+				Id: jb.id,
+				Payload: &jobsPayload{
+					Action: jobActHumanDetail[jb.action],
+					State: jobStatusHumanDetail[jb.state],
+				},
+				Updated_At: jb.updated_at.String(),
+				Created_At: jb.created_at.String(),
+			},
+		}}, 200)
+}
 
 func (m *apiController) httpHandlerHostGet(w http.ResponseWriter, r *http.Request) {
 	var req = context.Get(r, "internal_request").(*httpRequest)
@@ -266,7 +297,7 @@ func (m *apiController) respondJSON(w http.ResponseWriter, req *httpRequest, pay
 		rspPayload.Debug = &responseDebug{
 			RequestId: req.id } }
 
-	if rspPayload.Errors,status = req.saveErrors().respondApiErrors(); req.status > status {
+	if rspPayload.Errors = req.saveErrors().respondApiErrors(); req.status > status {
 		status = req.status
 		rspPayload.Data = nil	}
 

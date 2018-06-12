@@ -17,6 +17,7 @@ const (
 	errHostsAbnormalIp
 	errHostsIpmiTldMismatch
 	errHostsIpmiCidrMismatch
+	errJobsJobNotFound
 
 	// telegram errors:
 	errTgUnknownCommand = uint8(iota)
@@ -38,6 +39,7 @@ var (
 		errHostsAbnormalIp: "Abnormal IP address",
 		errHostsIpmiTldMismatch: "Ipmi hostname tld mismatch",
 		errHostsIpmiCidrMismatch: "Ipmi CIDR mismatch",
+		errJobsJobNotFound: "Job not found",
 	}
 	apiErrorsDetail = map[uint8]string{
 		errNotError: "",
@@ -51,6 +53,7 @@ var (
 		errHostsAbnormalIp: "The IP address must be in the format \"255.255.255.255\"",
 		errHostsIpmiTldMismatch: "The resolved top-level domain of the ipmi (TLD) does not match the configuration. Correct this discrepancy in the configuration file and try again!",
 		errHostsIpmiCidrMismatch: "The given ipmi address is not included to the configured ipmi CIDR block! Correct this discrepancy in the configuration file and try again!",
+		errJobsJobNotFound: "The requested job was not found in the database!",
 	}
 	apiErrorsStatus = map[uint8]int{
 		errNotError: 0,
@@ -64,6 +67,7 @@ var (
 		errHostsAbnormalIp: http.StatusBadRequest,
 		errHostsIpmiTldMismatch: http.StatusBadRequest,
 		errHostsIpmiCidrMismatch: http.StatusBadRequest,
+		errJobsJobNotFound: http.StatusNotFound,
 	}
 
 	// telegram errors:

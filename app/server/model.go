@@ -29,6 +29,7 @@ func (m *hostModel) checkMacExistence(mac string) bool {
 	if e != nil { m.handleError(e, errInternalSqlError, "[HOST]: Could not get result from DB!"); return false }
 	defer rows.Close()
 
+	// BUG: bad if for rows.Next (check queue.go for fix it)
 	if ! rows.Next() {
 		m.handleError(rows.Err(), errInternalSqlError, "[HOST]: Could not exec rows.Next method!"); return false}
 
@@ -51,6 +52,7 @@ func (m *hostModel) getHostByMac(mac string) *baseHost {
 	if e != nil { m.handleError(e, errInternalSqlError, "[HOST]: Could not get result from DB!"); return nil }
 	defer rows.Close()
 
+	// BUG: bad if for rows.Next (check queue.go for fix it)
 	if ! rows.Next() {
 		m.handleError(rows.Err(), errInternalSqlError, "[HOST]: Could not exec rows.Next method!"); return nil}
 
@@ -78,6 +80,7 @@ func (m *hostModel) checkHostExistence(hostname string) bool {
 		return false }
 	defer rows.Close()
 
+	// BUG: bad if for rows.Next (check queue.go for fix it)
 	if ! rows.Next() {
 		m.handleError(rows.Err(), errInternalSqlError, "[HOST]: Could not exec rows.Next method!")
 		return false }

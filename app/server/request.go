@@ -32,13 +32,13 @@ func (m *httpRequest) updateAndSave() {
 		globLogger.Error().Err(e).Msg("[REQUEST]: Could not execute DB statement!"); return }
 }
 
-func (m *httpRequest) newError(e uint8) *apiError {
-	var err *apiError = new(apiError).setError(e)
+func (m *httpRequest) newError(e uint8) (err *apiError) {
+	err = newApiError(e)
 	m.errors = append(m.errors, err)
 	return err
 }
 
-func (m *httpRequest) respondApiErrors() ([]*responseError, int) {
+func (m *httpRequest) respondApiErrors() ([]*responseError) {
 	var rspErrors []*responseError
 
 	for _,v := range m.errors {
@@ -49,15 +49,13 @@ func (m *httpRequest) respondApiErrors() ([]*responseError, int) {
 			Title: apiErrorsTitle[v.e],
 			Detail: apiErrorsDetail[v.e],
 			Source: &errorSource{
-				Parameter: v.srcParam },
-			Links: &dataLinks{
-				Self: m.link } })
+				Parameter: v.srcParam } })
 
 		if apiErrorsStatus[v.e] > m.status {
 		 m.status = apiErrorsStatus[v.e] }
 	}
 
-	return rspErrors,m.status
+	return rspErrors
 }
 
 func (m *httpRequest) saveErrors() *httpRequest {
