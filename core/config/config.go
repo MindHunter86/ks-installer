@@ -27,6 +27,9 @@ type CoreConfig struct {
 			Chain_Buffer int }
 		Rsview struct {
 			Url string
+			Client struct {
+				Timeout int
+				Insecure_Skip_Verify bool }
 			Authentication struct {
 				Login, Password string
 				Test_String string }

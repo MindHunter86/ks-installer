@@ -76,6 +76,12 @@ LOOP:
 }
 
 func (m *HttpService) Destruct() error {
+
+	defer func(l *zerolog.Logger){
+		if r := recover(); r != nil {
+			l.Error().Interface("panic_error", r).Msg("PANIC! The function is recovered!") }
+	}(m.log)
+
 	close(m.done)
 	return nil
 }

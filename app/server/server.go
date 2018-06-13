@@ -16,6 +16,7 @@ var (
 	globApi *apiController
 	globSqlDB *sql.DB
 	globQueueChan chan *queueJob
+	globRsview *rsviewClient
 )
 
 type App struct {
@@ -27,6 +28,11 @@ type App struct {
 func (m *App) Construct() (*App, error) {
 	m.queueDp = newQueueDispatcher()
 	globQueueChan = m.queueDp.getQueueChan()
+
+	var e uint8
+	globRsview,e = newRsviewClient(); if e != errNotError {
+		globLogger.Error().Str("err", apiErrorsDetail[e]).Msg("RSVIEW ERROR!") }
+
 	return m,nil
 }
 
