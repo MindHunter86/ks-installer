@@ -4,23 +4,21 @@ import "time"
 import "net"
 import "github.com/satori/go.uuid"
 
-
 type (
 	baseHost struct {
-		req *httpRequest
+		req   *httpRequest
 		model *hostModel
 
-		id string
-		hostname string
+		id           string
+		hostname     string
 		ipmi_address *net.IP
-		updated_at *time.Time
+		updated_at   *time.Time
 	}
 )
 
-
 func newHost(r *httpRequest) *baseHost {
 	return &baseHost{
-		id: uuid.NewV4().String(),
+		id:  uuid.NewV4().String(),
 		req: r,
 	}
 }
@@ -34,15 +32,19 @@ func (m *baseHost) parseIpmiAddress(ipmiIp *string) bool {
 	var ipmiAddr = net.ParseIP(*ipmiIp)
 	if ipmiAddr == nil {
 		m.handleError(nil, errHostsAbnormalIp, "[HOST]: Could not parse the given IP address!")
-		return false }
+		return false
+	}
 
-	_,ipmiBlock,e := net.ParseCIDR(globConfig.Base.Ipmi.CIDR_Block); if e != nil {
+	_, ipmiBlock, e := net.ParseCIDR(globConfig.Base.Ipmi.CIDR_Block)
+	if e != nil {
 		m.handleError(e, errInternalCommonError, "[HOST]: Could not parse configured ipmi CIDR block!")
-		return false }
+		return false
+	}
 
-	if ! ipmiBlock.Contains(ipmiAddr) {
+	if !ipmiBlock.Contains(ipmiAddr) {
 		m.handleError(nil, errHostsIpmiCidrMismatch, "[HOST] The configured CIDR does not include this IP address!")
-		return false }
+		return false
+	}
 
 	m.ipmi_address = &ipmiAddr
 	return true
@@ -50,11 +52,16 @@ func (m *baseHost) parseIpmiAddress(ipmiIp *string) bool {
 
 func (m *baseHost) resolveIpmiHostname() string {
 
-	hostnames,e := net.LookupAddr(m.ipmi_address.String()); if e != nil {
-		m.handleError(e, errInternalCommonError, "[HOST]: Net lookup error!"); return "" }
+	hostnames, e := net.LookupAddr(m.ipmi_address.String())
+	if e != nil {
+		m.handleError(e, errInternalCommonError, "[HOST]: Net lookup error!")
+		return ""
+	}
 
 	if len(hostnames) != 1 {
-		m.handleError(nil, errHostsAmbiguousResolver, "[HOST]: The resolver returned two or more hostnames!"); return "" }
+		m.handleError(nil, errHostsAmbiguousResolver, "[HOST]: The resolver returned two or more hostnames!")
+		return ""
+	}
 
 	return hostnames[1]
 }

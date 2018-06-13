@@ -17,7 +17,6 @@ import "bytes"
 import "golang.org/x/net/html"
 import "golang.org/x/net/html/atom"
 
-
 const (
 	rsviewTableRescan = uint8(iota)
 	rsviewTableHostname
@@ -41,34 +40,32 @@ const (
 
 var (
 	rsviewTableHuman = map[uint8]string{
-		rsviewTableRescan: "Rescan link",
-		rsviewTableHostname: "Hostname",
-		rsviewTablePort: "Port",
-		rsviewTableBoundle: "Boundle",
-		rsviewTableForceUp: "Force-UP",
-		rsviewTableVlans: "Vlans",
-		rsviewTableAdmOpStatus: "Admin/Oper status",
-		rsviewTableLldp: "LLDP",
-		rsviewTableMacList: "Mac list",
-		rsviewTableLinkIp: "Link IP",
-		rsviewTableRipList: "RIP list",
+		rsviewTableRescan:       "Rescan link",
+		rsviewTableHostname:     "Hostname",
+		rsviewTablePort:         "Port",
+		rsviewTableBoundle:      "Boundle",
+		rsviewTableForceUp:      "Force-UP",
+		rsviewTableVlans:        "Vlans",
+		rsviewTableAdmOpStatus:  "Admin/Oper status",
+		rsviewTableLldp:         "LLDP",
+		rsviewTableMacList:      "Mac list",
+		rsviewTableLinkIp:       "Link IP",
+		rsviewTableRipList:      "RIP list",
 		rsviewTableLinkIpByName: "Link IP by name",
-		rsviewTableRipIpByName: "RIP IP by name",
-		rsviewTableRack: "Rack",
-		rsviewTableZoneName: "Zone name",
-		rsviewTableDcName: "DC name",
-		rsviewTablePortFlapped: "Port flapped",
-		rsviewTableLastScan: "Last scan",
+		rsviewTableRipIpByName:  "RIP IP by name",
+		rsviewTableRack:         "Rack",
+		rsviewTableZoneName:     "Zone name",
+		rsviewTableDcName:       "DC name",
+		rsviewTablePortFlapped:  "Port flapped",
+		rsviewTableLastScan:     "Last scan",
 	}
 )
-
 
 type rsviewClient struct {
 	httpClient *http.Client
 
 	httpAuthHeader string
 }
-
 
 func newRsviewClient() (*rsviewClient, uint8) {
 
@@ -77,42 +74,48 @@ func newRsviewClient() (*rsviewClient, uint8) {
 			Timeout: time.Duration(globConfig.Base.Rsview.Client.Timeout) * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: globConfig.Base.Rsview.Client.Insecure_Skip_Verify },
+					InsecureSkipVerify: globConfig.Base.Rsview.Client.Insecure_Skip_Verify},
 			},
 		},
 	}
 
-	rq,e := http.NewRequest("GET", globConfig.Base.Rsview.Url, nil); if e != nil {
+	rq, e := http.NewRequest("GET", globConfig.Base.Rsview.Url, nil)
+	if e != nil {
 		newApiError(errInternalCommonError).log(e, "[RSVIEW]: Could not create new httpRequest!")
-		return nil,errInternalCommonError }
+		return nil, errInternalCommonError
+	}
 
 	rq.SetBasicAuth(
 		globConfig.Base.Rsview.Authentication.Login,
 		globConfig.Base.Rsview.Authentication.Password)
 
-//dump,e := httputil.DumpRequest(rq, true); if e != nil {
-//	newApiError(errInternalCommonError).log(e, "Request dump error!")
-//	return nil,errInternalCommonError }
-//globLogger.Debug().Bytes("request", dump).Msg("")
+	//dump,e := httputil.DumpRequest(rq, true); if e != nil {
+	//	newApiError(errInternalCommonError).log(e, "Request dump error!")
+	//	return nil,errInternalCommonError }
+	//globLogger.Debug().Bytes("request", dump).Msg("")
 
-	rsp,e := rcl.httpClient.Do(rq); if e != nil {
+	rsp, e := rcl.httpClient.Do(rq)
+	if e != nil {
 		newApiError(errRsviewGenericError).log(e, "[RSVIEW]: Could not do the request!")
-		return nil,errRsviewGenericError }
+		return nil, errRsviewGenericError
+	}
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusOK {
 		if rsp.StatusCode == http.StatusUnauthorized {
 			newApiError(errRsviewAuthError).log(nil, "[RSVIEW]: Authentication failed in rsview!")
-			return nil,errRsviewAuthError }
+			return nil, errRsviewAuthError
+		}
 
 		globLogger.Warn().Int("response_code", rsp.StatusCode).Msg("[RSVIEW]: Abnormal response!")
 		newApiError(errRsviewGenericError).log(nil, "[RSVIEW]: Response code is not 200")
-		return nil,errRsviewGenericError }
+		return nil, errRsviewGenericError
+	}
 
 	rcl.httpAuthHeader = rsp.Request.Header.Get("Authorization")
 	globLogger.Debug().Str("auth_header", rcl.httpAuthHeader).Msg("Rsview HTTP Basic session")
 
-	return rcl,rcl.testRsviewClient(rsp.Body)
+	return rcl, rcl.testRsviewClient(rsp.Body)
 }
 
 func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) uint8 {
@@ -121,11 +124,14 @@ func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) uint8 {
 
 	for buf.Scan() {
 		if strings.Contains(buf.Text(), globConfig.Base.Rsview.Authentication.Test_String) {
-		 return errNotError } }
+			return errNotError
+		}
+	}
 
 	if e := buf.Err(); e != nil {
 		newApiError(errInternalCommonError).log(e, "[RSVIEW]: Could not test rsview client because of bufio error!")
-		return errInternalCommonError }
+		return errInternalCommonError
+	}
 
 	newApiError(errRsviewAuthTestFail).log(nil, "[RSVIEW]: Client test failed!")
 	return errRsviewAuthTestFail
@@ -134,7 +140,7 @@ func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) uint8 {
 // func (m *rsviewClient) parsePortAttributes(mac *net.HardwareAddr) (uint8) {
 func (m *rsviewClient) parsePortAttributes(payload string) uint8 {
 
-	rqUrl,e := url.Parse(globConfig.Base.Rsview.Url)
+	rqUrl, e := url.Parse(globConfig.Base.Rsview.Url)
 
 	// mask our url:
 
@@ -158,9 +164,11 @@ func (m *rsviewClient) parsePortAttributes(payload string) uint8 {
 
 	rqUrl.RawQuery = urlArgs.Encode()
 
-	rq,e := http.NewRequest("GET", rqUrl.String(), nil); if e != nil {
+	rq, e := http.NewRequest("GET", rqUrl.String(), nil)
+	if e != nil {
 		newApiError(errInternalCommonError).log(e, "[RSVIEW]: Could not create new httpRequest!")
-		return errInternalCommonError }
+		return errInternalCommonError
+	}
 
 	// mask our request
 	rq.Header.Set("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:58.0) Gecko/20100101 Firefox/58.0")
@@ -172,33 +180,38 @@ func (m *rsviewClient) parsePortAttributes(payload string) uint8 {
 
 	rq.Header.Set("Authorization", m.httpAuthHeader)
 
-	dump,e := httputil.DumpRequest(rq, true); if e != nil {
+	dump, e := httputil.DumpRequest(rq, true)
+	if e != nil {
 		newApiError(errInternalCommonError).log(e, "Request dump error!")
-		return errInternalCommonError }
+		return errInternalCommonError
+	}
 	globLogger.Debug().Bytes("request", dump).Msg("")
 
-	rsp,e := m.httpClient.Do(rq); if e != nil {
+	rsp, e := m.httpClient.Do(rq)
+	if e != nil {
 		newApiError(errRsviewGenericError).log(e, "[RSVIEW]: Could not do the request!")
-		return errRsviewGenericError	}
+		return errRsviewGenericError
+	}
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusOK {
 		globLogger.Warn().Int("response_code", rsp.StatusCode).Msg("[RSVIEW]: Abnormal response!")
 		newApiError(errRsviewGenericError).log(e, "[RSVIEW]: Response code is not 200")
-		return errRsviewGenericError }
+		return errRsviewGenericError
+	}
 
-//rDump,e := httputil.DumpResponse(rsp, true); if e != nil {
-//	newApiError(errInternalCommonError).log(e, "Response dump error!")
-//	return errInternalCommonError }
-//globLogger.Debug().Bytes("request", rDump).Msg("")
+	//rDump,e := httputil.DumpResponse(rsp, true); if e != nil {
+	//	newApiError(errInternalCommonError).log(e, "Response dump error!")
+	//	return errInternalCommonError }
+	//globLogger.Debug().Bytes("request", rDump).Msg("")
 
-		// TODO: XXX: Do we need JUN rescan before page parse ?
+	// TODO: XXX: Do we need JUN rescan before page parse ?
 
 	m.parseResponsePage(rsp.Body)
 	return errNotError
 }
 
-func (m *rsviewClient) parseResponsePage(rBody io.ReadCloser) (uint8) {
+func (m *rsviewClient) parseResponsePage(rBody io.ReadCloser) uint8 {
 
 	var z *html.Tokenizer = html.NewTokenizer(rBody)
 
@@ -214,7 +227,8 @@ LOOP:
 		case html.ErrorToken:
 			if z.Err() != io.EOF {
 				newApiError(errInternalCommonError).log(z.Err(), "[RSVIEW]: Tokenizer generic error!")
-				return errInternalCommonError }
+				return errInternalCommonError
+			}
 			break LOOP
 
 		case html.StartTagToken:
@@ -222,41 +236,55 @@ LOOP:
 
 			switch tkn.DataAtom {
 			case atom.Tr:
-				for _,attr := range tkn.Attr {
+				for _, attr := range tkn.Attr {
 					if attr.Key == "class" && attr.Val == "result" {
-						if trResultCount++; trResultCount > 3 { break }
+						if trResultCount++; trResultCount > 3 {
+							break
+						}
 						continue
 					}
 				}
 			case atom.Td:
-				if len(tkn.Attr) == 0 { continue }
-				if tkn.Attr[0].Key != "class" || ( tkn.Attr[0].Val != "result_table2" && tkn.Attr[0].Val != "popup") { continue }
+				if len(tkn.Attr) == 0 {
+					continue
+				}
+				if tkn.Attr[0].Key != "class" || (tkn.Attr[0].Val != "result_table2" && tkn.Attr[0].Val != "popup") {
+					continue
+				}
 
 				tdClassResult = true
 			}
 
 		case html.EndTagToken:
 			tkn := z.Token()
-			if tkn.DataAtom != atom.Td || !tdClassResult { continue }
-			if ! tdTextReaded { buf = append(buf, "NULL") }
+			if tkn.DataAtom != atom.Td || !tdClassResult {
+				continue
+			}
+			if !tdTextReaded {
+				buf = append(buf, "NULL")
+			}
 			tdClassResult = false
 			tdTextReaded = false
 
 		case html.TextToken:
 			_ = z.Token()
-			if ! tdClassResult { continue }
-			bData := bytes.Replace( bytes.ToLower(bytes.TrimSpace(z.Raw())), []byte("none"), []byte(""), -1 )
+			if !tdClassResult {
+				continue
+			}
+			bData := bytes.Replace(bytes.ToLower(bytes.TrimSpace(z.Raw())), []byte("none"), []byte(""), -1)
 			if bytes.Compare(bData, []byte(" ")) != 0 && len(bData) != 0 {
 				if tdTextReaded {
 					lastTest := len(buf) - 1
 					buf[lastTest] = buf[lastTest] + " " + string(bData)
-					continue }
+					continue
+				}
 				buf = append(buf, string(bData))
-				tdTextReaded = true }
+				tdTextReaded = true
+			}
 		}
 	}
 
-	for k,v := range buf {
+	for k, v := range buf {
 		globLogger.Info().Str("human", rsviewTableHuman[uint8(k)]).Str("value", v).Msg("parsed value")
 	}
 

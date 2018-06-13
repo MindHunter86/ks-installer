@@ -15,34 +15,36 @@ import (
 	"github.com/rs/zerolog"
 )
 
-
 type Core struct {
-	sql sql.SqlDriver
+	sql  sql.SqlDriver
 	http *http.HttpService
 
 	log *zerolog.Logger
 	cfg *config.CoreConfig
 
 	appWg sync.WaitGroup
-	app *server.App
+	app   *server.App
 }
 
-
-func (m *Core) SetLogger(l *zerolog.Logger) *Core { m.log = l; return m }
+func (m *Core) SetLogger(l *zerolog.Logger) *Core    { m.log = l; return m }
 func (m *Core) SetConfig(c *config.CoreConfig) *Core { m.cfg = c; return m }
 func (m *Core) Construct() (*Core, error) {
 	var e error
 
 	// application configuration:
-	if m.app,e = new(server.App).SetLogger(m.log).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
+	if m.app, e = new(server.App).SetLogger(m.log).SetConfig(m.cfg).Construct(); e != nil {
+		return nil, e
+	}
 
 	// internal resources configuration:
-	if m.sql,e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil { return nil,e }
+	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
+		return nil, e
+	}
 	m.app.SetSqlDb(m.sql.GetRawDBSession())
 
 	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
 
-	return m,nil
+	return m, nil
 }
 
 func (m *Core) Bootstrap() error {
@@ -57,13 +59,15 @@ func (m *Core) Bootstrap() error {
 
 	// http service bootstrap:
 	go func(e chan error, wg sync.WaitGroup) {
-		wg.Add(1); defer wg.Done()
+		wg.Add(1)
+		defer wg.Done()
 		e <- m.http.Bootstrap()
 	}(epipe, m.appWg)
 
 	// application bootstrap:
 	go func(e chan error, wg sync.WaitGroup) {
-		wg.Add(1); defer wg.Done()
+		wg.Add(1)
+		defer wg.Done()
 		epipe <- m.app.Bootstrap()
 	}(epipe, m.appWg)
 
@@ -79,7 +83,9 @@ LOOP:
 
 		// application error catcher:
 		case e = <-epipe:
-			if e != nil { m.log.Error().Err(e).Msg("Runtime error! Abnormal application closing!") }
+			if e != nil {
+				m.log.Error().Err(e).Msg("Runtime error! Abnormal application closing!")
+			}
 			break LOOP
 			// TODO: automatic application re-bootstrap
 
@@ -97,5 +103,6 @@ func (m *Core) Destruct(e *error) error {
 	m.http.Destruct()
 	m.sql.Destruct()
 
-	m.appWg.Wait(); return *e
+	m.appWg.Wait()
+	return *e
 }
