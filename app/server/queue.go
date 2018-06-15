@@ -124,7 +124,6 @@ func (m *queueJob) appendAppError(aErr *appError) *appError {
 
 		for _,v := range m.errors {
 			v.save()
-			globLogger.Debug().Str("jobid", m.id).Str("reqid", m.requested_by).Str("job", jobActHumanDetail[m.action]).Msg("")
 		}
 
 	// TODO: add icq notify

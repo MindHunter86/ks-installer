@@ -133,21 +133,10 @@ func NewApiController() *mux.Router {
 
 	s.HandleFunc("/job/{id:(?:[0-9a-f]{8}-)(?:[0-9a-f]{4}-){3}(?:[0-9a-f]{12})}", globApi.httpHandlerJobGet).Methods("GET")
 
-	s.HandleFunc("/jun/test", globApi.httpHandlerJunTest).Methods("GET")
 	// TODO: reload the job if it does not work (failed
 	// /v1/job/UUID?try_again=1
 
 	return r
-}
-
-// TODO 2DELETE
-func (m *apiController) httpHandlerJunTest(w http.ResponseWriter, r *http.Request) {
-
-	globLogger.Debug().Msg("Test handler has reached!")
-
-	// globRsview.parsePortAttributes("18:31:bf:44:f0:19")
-
-	w.WriteHeader(201)
 }
 
 func (m *apiController) httpMiddlewareRequestLog(h http.Handler) http.Handler {
@@ -290,8 +279,6 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		req.newError(errApiUnknownType)
 		m.respondJSON(w, req, nil, 0)
 		return
-	default:
-		globLogger.Debug().Msg("[API]: data checker is OK!")
 	}
 
 	// test given ipmi && mac addresses:
