@@ -1,9 +1,9 @@
 package server
 
-import "strings"
-
-import "time"
 import "net"
+import "context"
+import "time"
+import "strings"
 import "github.com/satori/go.uuid"
 
 type (
@@ -44,7 +44,13 @@ func (m *baseHost) parseIpmiAddress(ipmiIp *string) *appError {
 
 func (m *baseHost) resolveIpmiHostname() *appError {
 
-	hostnames, e := net.LookupAddr(m.ipmi_address.String())
+	var resolver = &net.Resolver{
+		Dial: func(ctx context.Context, network, server string) (net.Conn, error) {
+			return new(net.Dialer).DialContext(ctx, network, globConfig.Base.Dns_Resolver)
+		},
+	}
+
+	hostnames, e := resolver.LookupAddr(context.Background(), m.ipmi_address.String())
 	if e != nil {
 		return newAppError(errInternalCommonError).log(e, "Net lookup error!")
 	}

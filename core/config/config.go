@@ -9,6 +9,7 @@ import (
 type CoreConfig struct {
 	Base struct {
 		Log_Level string
+		Dns_Resolver string
 		Http      struct {
 			Listen, Host                string
 			Read_Timeout, Write_Timeout int
