@@ -44,10 +44,12 @@ func (m *baseHost) parseIpmiAddress(ipmiIp *string) *appError {
 
 func (m *baseHost) resolveIpmiHostname() *appError {
 
-	var resolver = &net.Resolver{
-		Dial: func(ctx context.Context, network, server string) (net.Conn, error) {
+	var resolver = new(net.Resolver)
+
+	if globConfig.Base.Dns_Resolver != "" {
+		resolver.Dial = func(ctx context.Context, network, server string) (net.Conn, error) {
 			return new(net.Dialer).DialContext(ctx, network, globConfig.Base.Dns_Resolver)
-		},
+		}
 	}
 
 	hostnames, e := resolver.LookupAddr(context.Background(), m.ipmi_address.String())
