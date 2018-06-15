@@ -26,10 +26,10 @@ func (m *App) Construct() (*App, error) {
 	m.queueDp = newQueueDispatcher()
 	globQueueChan = m.queueDp.getQueueChan()
 
-	var e uint8
-	globRsview, e = newRsviewClient()
-	if e != errNotError {
-		globLogger.Error().Str("err", apiErrorsDetail[e]).Msg("RSVIEW ERROR!")
+	var err *appError
+	globRsview, err = newRsviewClient()
+	if err != nil {
+		globLogger.Error().Str("err", apiErrorsDetail[err.code]).Msg("RSVIEW ERROR!")
 	}
 
 	return m, nil

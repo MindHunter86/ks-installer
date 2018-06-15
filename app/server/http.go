@@ -140,11 +140,12 @@ func NewApiController() *mux.Router {
 	return r
 }
 
+// TODO 2DELETE
 func (m *apiController) httpHandlerJunTest(w http.ResponseWriter, r *http.Request) {
 
 	globLogger.Debug().Msg("Test handler has reached!")
 
-	globRsview.parsePortAttributes("18:31:bf:44:f0:19")
+	// globRsview.parsePortAttributes("18:31:bf:44:f0:19")
 
 	w.WriteHeader(201)
 }
@@ -282,8 +283,6 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		fallthrough
 	case len(postRequest.Data.Attributes.Ports) == 0:
 		fallthrough
-	case postRequest.Data.Attributes.Ipmi.Ip_Address == "":
-		fallthrough
 	case false: // something impossible
 		req.newError(errApiUnknownApiFormat)
 		m.respondJSON(w, req, nil, 0)
@@ -296,34 +295,49 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		globLogger.Debug().Msg("[API]: data checker is OK!")
 	}
 
-	var macs []string
-	for _, v := range postRequest.Data.Attributes.Ports {
-		if v.Mac == "" {
-			req.newError(errHostsAbnormalMac)
-			m.respondJSON(w, req, nil, 0)
-			return
-		}
-		macs = append(macs, v.Mac)
-	}
-
-	var host = newHost(req)
-	if !host.parseIpmiAddress(&postRequest.Data.Attributes.Ipmi.Ip_Address) {
+	// test given ipmi && mac addresses:
+	var ipAddr *string
+	if ipAddr = &postRequest.Data.Attributes.Ipmi.Ip_Address; *ipAddr == "" {
+		req.appendAppError(newAppError(errHostsAbnormalIp))
 		m.respondJSON(w, req, nil, 0)
 		return
 	}
 
-	// TODO INPUT LOGICAL TEST
+	var macs []*string
+	for _, v := range postRequest.Data.Attributes.Ports {
+		if v.Mac == "" {
+			req.appendAppError(newAppError(errPortsAbnormalMac))
+			m.respondJSON(w, req, nil, 0)
+			return
+		}
 
-	job, e := newQueueJob(&req.id, jobActRequestHostCreate)
-	if e != nil {
-		req.newError(errInternalCommonError).log(e, "[HTTP]: Could not create job!")
+		macs = append(macs, &v.Mac)
+	}
+
+	// parse given ipmi && mac addresses:
+	var host = newHost()
+	if e := host.parseIpmiAddress(ipAddr); e != nil {
+		req.appendAppError(e)
+		m.respondJSON(w, req, nil, 0)
+		return
+	}
+
+	var port *basePort = newPort()
+	if e := port.parseMacAddress(macs); e != nil {
+		req.appendAppError(e)
+		m.respondJSON(w, req, nil, 0)
+		return
+	}
+
+	// add jobs and respond:
+	job,err := newQueueJob(&req.id, jobActHostCreate); if err != nil {
+		req.appendAppError(err)
 		m.respondJSON(w, req, nil, 0)
 		return
 	}
 
 	job.setPayload(&map[string]interface{}{
-		"job_input_host": host,
-		"job_input_macs": macs})
+		"job_input_host": host})
 
 	job.addToQueue()
 
@@ -333,7 +347,7 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		JobAttributes: &dataJobAttributes{
 			Job: &jobAttributesJob{
 				Id: job.id,
-				Payload: &jobsPayload{
+				Payload: &jobsPayload{ // TODO: rename Payload to Properties or Attributes or Meta(-Data)
 					Action: jobActHumanDetail[job.action],
 					State:  jobStatusHumanDetail[job.state],
 				},

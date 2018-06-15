@@ -5,7 +5,7 @@ import "time"
 import "io"
 import "crypto/tls"
 
-// import "net"
+import "net"
 import "net/url"
 import "net/http"
 import "net/http/httputil"
@@ -67,7 +67,7 @@ type rsviewClient struct {
 	httpAuthHeader string
 }
 
-func newRsviewClient() (*rsviewClient, uint8) {
+func newRsviewClient() (*rsviewClient, *appError) {
 
 	var rcl = &rsviewClient{
 		httpClient: &http.Client{
@@ -81,8 +81,7 @@ func newRsviewClient() (*rsviewClient, uint8) {
 
 	rq, e := http.NewRequest("GET", globConfig.Base.Rsview.Url, nil)
 	if e != nil {
-		newApiError(errInternalCommonError).log(e, "[RSVIEW]: Could not create new httpRequest!")
-		return nil, errInternalCommonError
+		return nil,newAppError(errInternalCommonError).log(e, "Could not create new httpRequest!")
 	}
 
 	rq.SetBasicAuth(
@@ -96,20 +95,18 @@ func newRsviewClient() (*rsviewClient, uint8) {
 
 	rsp, e := rcl.httpClient.Do(rq)
 	if e != nil {
-		newApiError(errRsviewGenericError).log(e, "[RSVIEW]: Could not do the request!")
-		return nil, errRsviewGenericError
+		return nil,newAppError(errRsviewGenericError).log(e, "Could not do the request!")
 	}
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusOK {
 		if rsp.StatusCode == http.StatusUnauthorized {
-			newApiError(errRsviewAuthError).log(nil, "[RSVIEW]: Authentication failed in rsview!")
-			return nil, errRsviewAuthError
+			return nil,newAppError(errRsviewAuthError).log(nil, "Authentication failed in rsview!")
 		}
 
 		globLogger.Warn().Int("response_code", rsp.StatusCode).Msg("[RSVIEW]: Abnormal response!")
-		newApiError(errRsviewGenericError).log(nil, "[RSVIEW]: Response code is not 200")
-		return nil, errRsviewGenericError
+		ae := newAppError(errRsviewGenericError)
+		return nil,ae.log(nil, "Response code is not 200!", ae.glCtx().Int("http_code", rsp.StatusCode))
 	}
 
 	rcl.httpAuthHeader = rsp.Request.Header.Get("Authorization")
@@ -118,27 +115,24 @@ func newRsviewClient() (*rsviewClient, uint8) {
 	return rcl, rcl.testRsviewClient(rsp.Body)
 }
 
-func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) uint8 {
+func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) *appError {
 
 	var buf = bufio.NewScanner(rBody)
 
 	for buf.Scan() {
 		if strings.Contains(buf.Text(), globConfig.Base.Rsview.Authentication.Test_String) {
-			return errNotError
+			return nil
 		}
 	}
 
 	if e := buf.Err(); e != nil {
-		newApiError(errInternalCommonError).log(e, "[RSVIEW]: Could not test rsview client because of bufio error!")
-		return errInternalCommonError
+		return newAppError(errInternalCommonError).log(e, "Could not test rsview client because of bufio error!")
 	}
 
-	newApiError(errRsviewAuthTestFail).log(nil, "[RSVIEW]: Client test failed!")
-	return errRsviewAuthTestFail
+	return newAppError(errRsviewAuthTestFail).log(nil, "Client test failed!")
 }
 
-// func (m *rsviewClient) parsePortAttributes(mac *net.HardwareAddr) (uint8) {
-func (m *rsviewClient) parsePortAttributes(payload string) uint8 {
+func (m *rsviewClient) parsePortAttributes(mac *net.HardwareAddr) (*[]string, *appError) {
 
 	rqUrl, e := url.Parse(globConfig.Base.Rsview.Url)
 
@@ -155,7 +149,7 @@ func (m *rsviewClient) parsePortAttributes(payload string) uint8 {
 	urlArgs.Set("dns_link", "")
 	urlArgs.Set("link_ip", "")
 	urlArgs.Set("rip_ip", "")
-	urlArgs.Set("mac", payload)
+	urlArgs.Set("mac", mac.String())
 	urlArgs.Set("dns_rip", "")
 	urlArgs.Set("zone_name", "")
 	urlArgs.Set("rack", "")
@@ -166,8 +160,7 @@ func (m *rsviewClient) parsePortAttributes(payload string) uint8 {
 
 	rq, e := http.NewRequest("GET", rqUrl.String(), nil)
 	if e != nil {
-		newApiError(errInternalCommonError).log(e, "[RSVIEW]: Could not create new httpRequest!")
-		return errInternalCommonError
+		return nil,newAppError(errInternalCommonError).log(e, "Could not create new httpRequest!")
 	}
 
 	// mask our request
@@ -182,52 +175,40 @@ func (m *rsviewClient) parsePortAttributes(payload string) uint8 {
 
 	dump, e := httputil.DumpRequest(rq, true)
 	if e != nil {
-		newApiError(errInternalCommonError).log(e, "Request dump error!")
-		return errInternalCommonError
+		return nil,newAppError(errInternalCommonError).log(e, "Request dump error!")
 	}
 	globLogger.Debug().Bytes("request", dump).Msg("")
 
 	rsp, e := m.httpClient.Do(rq)
 	if e != nil {
-		newApiError(errRsviewGenericError).log(e, "[RSVIEW]: Could not do the request!")
-		return errRsviewGenericError
+		return nil,newAppError(errRsviewGenericError).log(e, "Could not do the request!")
 	}
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusOK {
-		globLogger.Warn().Int("response_code", rsp.StatusCode).Msg("[RSVIEW]: Abnormal response!")
-		newApiError(errRsviewGenericError).log(e, "[RSVIEW]: Response code is not 200")
-		return errRsviewGenericError
+		ae := newAppError(errRsviewGenericError)
+		return nil,ae.log(nil, "Response code is not 200!", ae.glCtx().Int("http_code", rsp.StatusCode))
 	}
-
-	//rDump,e := httputil.DumpResponse(rsp, true); if e != nil {
-	//	newApiError(errInternalCommonError).log(e, "Response dump error!")
-	//	return errInternalCommonError }
-	//globLogger.Debug().Bytes("request", rDump).Msg("")
 
 	// TODO: XXX: Do we need JUN rescan before page parse ?
 
-	m.parseResponsePage(rsp.Body)
-	return errNotError
+	return m.parseResponsePage(rsp.Body)
 }
 
-func (m *rsviewClient) parseResponsePage(rBody io.ReadCloser) uint8 {
-
-	var z *html.Tokenizer = html.NewTokenizer(rBody)
+func (m *rsviewClient) parseResponsePage(rBody io.ReadCloser) (*[]string, *appError) {
 
 	var buf []string
-
 	var trResultCount int
-	var tdClassResult bool
-	var tdTextReaded bool
+	var tdClassResult, tdTextReaded bool
+
+	var z *html.Tokenizer = html.NewTokenizer(rBody)
 
 LOOP:
 	for {
 		switch z.Next() {
 		case html.ErrorToken:
 			if z.Err() != io.EOF {
-				newApiError(errInternalCommonError).log(z.Err(), "[RSVIEW]: Tokenizer generic error!")
-				return errInternalCommonError
+				return &buf,newAppError(errInternalCommonError).log(z.Err(), "Tokenizer generic error!")
 			}
 			break LOOP
 
@@ -267,7 +248,7 @@ LOOP:
 			tdTextReaded = false
 
 		case html.TextToken:
-			_ = z.Token()
+			// _ = z.Token() - test it, please (XXX: 2DELETE)
 			if !tdClassResult {
 				continue
 			}
@@ -284,9 +265,17 @@ LOOP:
 		}
 	}
 
-	for k, v := range buf {
-		globLogger.Info().Str("human", rsviewTableHuman[uint8(k)]).Str("value", v).Msg("parsed value")
+	if len(buf) == 0 {
+		return &buf,newAppError(errRsviewParseError).log(nil, "Buffer is empty after parsing!")
 	}
 
-	return errNotError
+	if len(buf) != len(rsviewTableHuman) {
+		return &buf,newAppError(errRsviewUnknownApi).log(nil, "Comparison of buffer and template failed! Check rsview site layout!")
+	}
+
+	for k, v := range buf {
+		globLogger.Debug().Str("human", rsviewTableHuman[uint8(k)]).Str("value", v).Msg("parsed value")
+	}
+
+	return &buf,nil
 }

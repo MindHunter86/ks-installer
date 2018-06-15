@@ -8,7 +8,7 @@ import "github.com/satori/go.uuid"
 type httpRequest struct {
 	id, link string
 	status   int
-	errors   []*apiError
+	errors   []*appError
 }
 
 func (m *httpRequest) createAndSave(req *http.Request) (*httpRequest, error) {
@@ -42,34 +42,41 @@ func (m *httpRequest) updateAndSave() {
 	}
 }
 
-func (m *httpRequest) newError(e uint8) (err *apiError) {
-	err = newApiError(e)
+func (m *httpRequest) appendAppError(aErr *appError) *appError {
+	m.errors = append(m.errors, aErr)
+	return aErr
+}
+
+// TODO: 2DELETE !!!
+func (m *httpRequest) newError(e uint8) (err *appError) {
+	err = newAppError(e)
 	m.errors = append(m.errors, err)
 	return err
 }
 
+// TODO REFACTOR
 func (m *httpRequest) respondApiErrors() []*responseError {
 	var rspErrors []*responseError
 
 	for _, v := range m.errors {
 		rspErrors = append(rspErrors, &responseError{
-			Id:     v.getId(),
-			Code:   int(v.e),
-			Status: apiErrorsStatus[v.e],
-			Title:  apiErrorsTitle[v.e],
-			Detail: apiErrorsDetail[v.e],
-			Source: &errorSource{
-				Parameter: v.srcParam}})
+			Id:     v.id,
+			Code:   int(v.code),
+			Status: apiErrorsStatus[v.code],
+			Title:  apiErrorsTitle[v.code],
+			Detail: apiErrorsDetail[v.code]})
+		//	Source: &errorSource{
+		//		Parameter: v.srcParam}})
 
-		if apiErrorsStatus[v.e] > m.status {
-			m.status = apiErrorsStatus[v.e]
+		if apiErrorsStatus[v.code] > m.status {
+			m.status = apiErrorsStatus[v.code]
 		}
 	}
 
 	return rspErrors
 }
 
-func (m *httpRequest) saveErrors() *httpRequest {
+func (m *httpRequest) saveErrors() *httpRequest { // TODO REFACTOR THIS SHIT. Use (*appErr).save() method!
 	stmt, e := globSqlDB.Prepare("INSERT INTO errors (id,request_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?)")
 	if e != nil {
 		globLogger.Error().Err(e).Msg("[REQUEST]: Could not prepare DB statement!")
@@ -79,11 +86,11 @@ func (m *httpRequest) saveErrors() *httpRequest {
 	defer stmt.Close()
 
 	for _, v := range m.errors {
-		globLogger.Info().Str("request_link", m.link).Int("http_code", apiErrorsStatus[v.e]).Str("error_id", v.getId()).Str("error_title", apiErrorsTitle[v.e]).Msg("[REQUEST]:")
+		globLogger.Info().Str("request_link", m.link).Int("http_code", apiErrorsStatus[v.code]).Str("error_id", v.id).Str("error_title", apiErrorsTitle[v.code]).Msg("[REQUEST]:")
 
-		_, e = stmt.Exec(v.getId(), m.id, v.e, apiErrorsTitle[v.e], apiErrorsDetail[v.e])
+		_, e = stmt.Exec(v.id, m.id, v.code, apiErrorsTitle[v.code], apiErrorsDetail[v.code])
 		if e != nil {
-			globLogger.Error().Err(e).Str("error_id", v.getId()).Msg("[REQUEST]: Could not write error report!")
+			globLogger.Error().Err(e).Str("error_id", v.id).Msg("[REQUEST]: Could not write error report!")
 		}
 	}
 

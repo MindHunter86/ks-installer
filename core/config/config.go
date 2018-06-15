@@ -28,7 +28,9 @@ type CoreConfig struct {
 		Queue struct {
 			Workers         int
 			Worker_Capacity int
-			Chain_Buffer    int
+			Jobs_Chain_Buffer    int
+			Max_Job_Fails int
+			Jobs_Retry_Interval int
 		}
 		Rsview struct {
 			Url    string

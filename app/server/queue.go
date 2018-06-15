@@ -8,7 +8,7 @@ import "github.com/gorilla/context"
 
 const (
 	jobActServerPing = uint8(iota)
-	jobActRequestHostCreate
+	jobActHostCreate
 	jobActRsviewParse // todo
 	jobActIcqSendMess // todo
 )
@@ -22,7 +22,7 @@ const (
 var (
 	jobActHumanDetail = map[uint8]string{
 		jobActServerPing:        "Server ping",
-		jobActRequestHostCreate: "Processing the received request to create a host",
+		jobActHostCreate: "Processing the received request to create a host",
 		jobActRsviewParse:       "Rsview parsing",
 		jobActIcqSendMess:       "ICQ message sending",
 	}
@@ -38,6 +38,8 @@ var (
 type (
 	queueJob struct {
 		payload *map[string]interface{}
+		fail_count int
+		errors []*appError
 
 		id           string
 		requested_by string
@@ -62,9 +64,9 @@ type (
 	}
 )
 
-func newQueueJob(reqId *string, act uint8) (jb *queueJob, e error) {
+func newQueueJob(reqId *string, act uint8) (*queueJob, *appError) {
 
-	jb = &queueJob{
+	var jb = &queueJob{
 		id:           uuid.NewV4().String(),
 		state:        jobStatusCreated,
 		action:       act,
@@ -72,12 +74,15 @@ func newQueueJob(reqId *string, act uint8) (jb *queueJob, e error) {
 		updated_at:   time.Now(),
 		created_at:   time.Now()}
 
-	_, e = globSqlDB.Exec(
+	_,e := globSqlDB.Exec(
 		"INSERT INTO jobs (id, requested_by, action, updated_at, created_at) VALUES (?,?,?,?,?)",
 		jb.id, jb.requested_by, jb.action,
 		jb.updated_at.Format("2006-01-02 15:04:05.999999"), jb.created_at.Format("2006-01-02 15:04:05.999999"))
+	if e != nil {
+		return nil,newAppError(errInternalCommonError).log(e, "Could not create a new job because of a database error!")
+	}
 
-	return
+	return jb,nil
 }
 
 func getJobById(req *http.Request) (jb *queueJob) {
@@ -123,22 +128,42 @@ func getJobById(req *http.Request) (jb *queueJob) {
 	return
 }
 
-func (m *queueJob) newError(e uint8) (ae *apiError) {
+func (m *queueJob) appendAppError(aErr *appError) *appError {
+
+	m.errors = append(m.errors, aErr)
+	m.stateUpdate(jobStatusFailed)
+	m.setFailed()
+	return aErr
+/*
+	if len(m.errors) == globConfig.Base.Queue.Max_Job_Fails {
+		globLogger.Error().Str("job_id", m.id).Str("job_action", jobActHumanDetail[m.action]).
+			Msg("The job has reached the maximum number of failures!")
+		return aErr
+		// TODO: Add icq notify here
+	}
+
+	// TODO: Add job restart
+*/
+}
+
+// 2DELETE; USE NEW (appErr).save() METHOD!
+func (m *queueJob) newError(e uint8) (err *appError) {
+
+	// TODO: delete this shit!
 
 	if !m.is_failed {
 		m.setFailed()
 	}
 
-	ae = newApiError(e)
+	err = newAppError(e)
 
-	_, err := globSqlDB.Exec(
-		"INSERT INTO errors (id,job_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?)",
-		ae.getId(), m.id, ae.e, apiErrorsTitle[ae.e], apiErrorsDetail[ae.e])
-
-	if err != nil {
-		globLogger.Error().Uint8("code", ae.e).Str("detail", apiErrorsDetail[ae.e]).Msg("[NOT SAVED]: " + apiErrorsTitle[ae.e])
-		return
-	}
+//	_,dbErr := globSqlDB.Exec(
+//		"INSERT INTO errors (id,job_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?)",
+//		err.getId(), m.id, err.e, apiErrorsTitle[err.e], apiErrorsDetail[err.e])
+//	if e != nil {
+//		globLogger.Error().Err(dbErr).Uint8("code", err.e).Str("detail", apiErrorsDetail[err.e]).Msg("[NOT SAVED]: " + apiErrorsTitle[err.e])
+//		return
+//	}
 
 	return
 }
@@ -152,7 +177,7 @@ func (m *queueJob) setFailed() {
 
 	if e != nil {
 		m.newError(errInternalSqlError).log(e, "[QUEUE]: Could not update job's failed flag!")
-		return
+		return // TODO: return newAppError
 	}
 }
 
@@ -165,7 +190,7 @@ func (m *queueJob) stateUpdate(state uint8) {
 
 	if e != nil {
 		m.newError(errInternalSqlError).log(e, "[QUEUE]: Could not update job's state!")
-		return
+		return // TODO: return newAppError
 	}
 }
 
@@ -179,7 +204,7 @@ func (m *queueJob) addToQueue() {
 
 func newQueueDispatcher() *queueDispatcher {
 	return &queueDispatcher{
-		jobQueue: make(chan *queueJob, globConfig.Base.Queue.Chain_Buffer),
+		jobQueue: make(chan *queueJob, globConfig.Base.Queue.Jobs_Chain_Buffer),
 		pool:     make(chan chan *queueJob, globConfig.Base.Queue.Worker_Capacity),
 
 		done:       make(chan struct{}, 1),
@@ -227,6 +252,10 @@ func (m *queueDispatcher) dispatch() {
 			}(buf)
 		}
 	}
+
+
+	// TODO: add sync.WaitGroup
+	// BUG: jobQueue without close()
 }
 
 func (m *queueDispatcher) destruct() {
@@ -260,21 +289,28 @@ func (m *queueWorker) spawn() {
 }
 
 func (m *queueWorker) doJob(jb *queueJob) {
-	globLogger.Debug().Msg("LOL! JOB RECEIVED!")
+	globLogger.Debug().Uint8("job_code", jb.action).Str("code_human", jobActHumanDetail[jb.action]).
+		Msg("The worker received a new job!")
 
+	// get payload for job handler:
+	var payload map[string]interface{} = *jb.payload
+
+	// match job handler and exec it:
 	switch jb.action {
-	case jobActRequestHostCreate:
+	case jobActHostCreate:
 
-		var payload map[string]interface{} = *jb.payload
+		var host = payload["job_payload_host"].(*baseHost)
 
-		var host = payload["job_input_host"].(*baseHost)
-		var macs = payload["job_input_macs"].([]string)
-
-		globLogger.Info().Str("ipmi_ip", host.ipmi_address.String()).Msg("Job found new IPMI IP address!")
-
-		for _, v := range macs {
-			globLogger.Info().Str("mac", v).Msg("job found new mac address!")
+		if e := host.resolveIpmiHostname(); e != nil {
+			jb.appendAppError(e)
 		}
+
+		if e := host.updateOrCreate(jb.id); e != nil {
+			jb.appendAppError(e)
+		}
+
+		jb.stateUpdate(jobStatusDone)
+
 	default:
 		globLogger.Warn().Msg("Unknown job type!")
 	}

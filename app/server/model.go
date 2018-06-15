@@ -116,19 +116,20 @@ func (m *hostModel) checkHostExistence(hostname string) bool {
 	return true
 }
 
+// TODO: REMOVE THIS SHIT
 func (m *hostModel) createNewHost(ipmiIp *string) *baseHost {
 
-	var host = newHost(m.request)
+	var host = newHost()
 
-	if !host.parseIpmiAddress(ipmiIp) {
+	if err := host.parseIpmiAddress(ipmiIp); err != nil {
 		return nil
 	}
 
 	var buf bytes.Buffer
-	if _, e := buf.WriteString(host.resolveIpmiHostname()); e != nil {
-		m.handleError(e, errInternalCommonError, "[HOST]: Bytes buffer - could not write the given string!")
-		return nil
-	}
+	//if _, e := buf.WriteString(host.resolveIpmiHostname()); e != nil {
+		//m.handleError(e, errInternalCommonError, "[HOST]: Bytes buffer - could not write the given string!")
+		//return nil
+	//}
 
 	if buf.Len() == 0 {
 		return nil
