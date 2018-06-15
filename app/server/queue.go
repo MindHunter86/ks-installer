@@ -131,19 +131,29 @@ func getJobById(req *http.Request) (jb *queueJob) {
 func (m *queueJob) appendAppError(aErr *appError) *appError {
 
 	m.errors = append(m.errors, aErr.setJobId(m.id))
-	m.stateUpdate(jobStatusFailed)
-	m.setFailed()
-	return aErr
-/*
+
 	if len(m.errors) == globConfig.Base.Queue.Max_Job_Fails {
 		globLogger.Error().Str("job_id", m.id).Str("job_action", jobActHumanDetail[m.action]).
 			Msg("The job has reached the maximum number of failures!")
+
+		m.stateUpdate(jobStatusFailed)
+		m.setFailed()
+
+		for _,v := range m.errors {
+			v.save()
+			globLogger.Debug().Str("jobid", m.id).Str("reqid", m.requested_by).Str("job", jobActHumanDetail[m.action]).Msg("")
+		}
+
+	// TODO: add icq notify
+
 		return aErr
-		// TODO: Add icq notify here
 	}
 
-	// TODO: Add job restart
-*/
+	// TODO: add interval between job starts
+
+	m.addToQueue()
+	return aErr
+
 }
 
 // 2DELETE; USE NEW (appErr).save() METHOD!
