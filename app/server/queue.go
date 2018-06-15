@@ -2,9 +2,7 @@ package server
 
 import "sync"
 import "time"
-import "net/http"
 import "github.com/satori/go.uuid"
-import "github.com/gorilla/context"
 
 const (
 	jobActServerPing = uint8(iota)
@@ -74,58 +72,44 @@ func newQueueJob(reqId *string, act uint8) (*queueJob, *appError) {
 		updated_at:   time.Now(),
 		created_at:   time.Now()}
 
-	_,e := globSqlDB.Exec(
+	if _,e := globSqlDB.Exec(
 		"INSERT INTO jobs (id, requested_by, action, updated_at, created_at) VALUES (?,?,?,?,?)",
 		jb.id, jb.requested_by, jb.action,
-		jb.updated_at.Format("2006-01-02 15:04:05.999999"), jb.created_at.Format("2006-01-02 15:04:05.999999"))
-	if e != nil {
+		jb.updated_at.Format("2006-01-02 15:04:05.999999"), jb.created_at.Format("2006-01-02 15:04:05.999999")); e != nil {
+
 		return nil,newAppError(errInternalCommonError).log(e, "Could not create a new job because of a database error!")
 	}
 
 	return jb,nil
 }
 
-func getJobById(req *http.Request) (jb *queueJob) {
+func getJobById(jobId string) (*queueJob, *appError) {
 
-	jb = new(queueJob)
-	var r = context.Get(req, "internal_request").(*httpRequest)
-	var jobId = context.Get(req, "param_jobid").(string)
+	jb := new(queueJob)
 
-	stmt, e := globSqlDB.Prepare("SELECT action,state,updated_at,created_at FROM jobs WHERE id=? LIMIT 2")
+	rws,e := globSqlDB.Query("SELECT action,state,updated_at,created_at FROM jobs WHERE id=? LIMIT 2", jobId);
 	if e != nil {
-		r.newError(errInternalSqlError).log(e, "[QUEUE]: Could not prepare DB statement!")
-		return
+		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
-	defer stmt.Close()
+	defer rws.Close()
 
-	rows, e := stmt.Query(jobId)
-	if e != nil {
-		r.newError(errInternalSqlError).log(e, "[QUEUE]: Could not get result from DB!")
-		return
-	}
-	defer rows.Close()
-
-	if !rows.Next() {
-		if e = rows.Err(); e != nil {
-			r.newError(errInternalSqlError).log(e, "[QUEUE]: Could not exec rows.Next method!")
-			return
+	if ! rws.Next() {
+		if rws.Err() != nil {
+			return nil,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
-		r.newError(errJobsJobNotFound).log(nil, "[QUEUE]: The requested job was not found!")
-		return
+		return nil,newAppError(errJobsJobNotFound).log(nil, "The requested job was not found!")
 	}
 
-	if e = rows.Scan(&jb.action, &jb.state, &jb.updated_at, &jb.created_at); e != nil {
-		r.newError(errInternalSqlError).log(e, "[QUEUE]: Could not scan the result from DB!")
-		return
+	if e = rws.Scan(&jb.action, &jb.state, &jb.updated_at, &jb.created_at); e != nil {
+		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB")
 	}
 
-	if rows.Next() {
-		r.newError(errInternalSqlError).log(nil, "[QUEUE]: Rows is not equal to 1. The DB has broken!")
-		return
+	if rws.Next() {
+		return nil,newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
 	}
 
 	jb.id = jobId
-	return
+	return jb,nil
 }
 
 func (m *queueJob) appendAppError(aErr *appError) *appError {
@@ -136,7 +120,6 @@ func (m *queueJob) appendAppError(aErr *appError) *appError {
 		globLogger.Error().Str("job_id", m.id).Str("job_action", jobActHumanDetail[m.action]).
 			Msg("The job has reached the maximum number of failures!")
 
-		m.stateUpdate(jobStatusFailed)
 		m.setFailed()
 
 		for _,v := range m.errors {
@@ -153,55 +136,31 @@ func (m *queueJob) appendAppError(aErr *appError) *appError {
 
 	m.addToQueue()
 	return aErr
-
 }
 
-// 2DELETE; USE NEW (appErr).save() METHOD!
-func (m *queueJob) newError(e uint8) (err *appError) {
-
-	// TODO: delete this shit!
-
-	if !m.is_failed {
-		m.setFailed()
-	}
-
-	err = newAppError(e)
-
-//	_,dbErr := globSqlDB.Exec(
-//		"INSERT INTO errors (id,job_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?)",
-//		err.getId(), m.id, err.e, apiErrorsTitle[err.e], apiErrorsDetail[err.e])
-//	if e != nil {
-//		globLogger.Error().Err(dbErr).Uint8("code", err.e).Str("detail", apiErrorsDetail[err.e]).Msg("[NOT SAVED]: " + apiErrorsTitle[err.e])
-//		return
-//	}
-
-	return
-}
-
-func (m *queueJob) setFailed() {
+func (m *queueJob) setFailed() *appError {
 
 	m.is_failed = true
-
-	_, e := globSqlDB.Exec(
-		"UPDATE jobs SET is_failed = 1 WHERE id=?", m.id)
-
-	if e != nil {
-		m.newError(errInternalSqlError).log(e, "[QUEUE]: Could not update job's failed flag!")
-		return // TODO: return newAppError
+	if err := m.stateUpdate(jobStatusFailed); err != nil {
+		return err
 	}
+
+	if _,e := globSqlDB.Exec("UPDATE jobs SET is_failed = 1 WHERE id=?", m.id); e != nil {
+		return newAppError(errInternalSqlError).log(e, "Could not exec the database query!")
+	}
+
+	return nil
 }
 
-func (m *queueJob) stateUpdate(state uint8) {
+func (m *queueJob) stateUpdate(state uint8) *appError {
 
 	m.state = state
 
-	_, e := globSqlDB.Exec(
-		"UPDATE jobs SET state = ? WHERE id = ?", state, m.id)
-
-	if e != nil {
-		m.newError(errInternalSqlError).log(e, "[QUEUE]: Could not update job's state!")
-		return // TODO: return newAppError
+	if _,e := globSqlDB.Exec("UPDATE jobs SET state = ? WHERE id = ?", state, m.id); e != nil {
+		return newAppError(errInternalSqlError).log(e, "Could not exec the database query!")
 	}
+
+	return nil
 }
 
 func (m *queueJob) setPayload(pl *map[string]interface{}) {
@@ -257,6 +216,12 @@ func (m *queueDispatcher) dispatch() {
 			return
 		case buf = <-m.jobQueue:
 			go func(job *queueJob) {
+
+				if err := job.stateUpdate(jobStatusPending); err != nil {
+					job.appendAppError(err)
+					return
+				}
+
 				nextWorker = <-m.pool
 				nextWorker <- job
 			}(buf)

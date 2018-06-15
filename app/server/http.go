@@ -217,14 +217,13 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 	var vars = mux.Vars(r)
 
 	if vars["id"] == "" {
-		req.newError(errApiUnknownApiFormat)
+		req.appendAppError(newAppError(errApiUnknownApiFormat))
 		m.respondJSON(w, req, nil, 0)
 		return
 	}
 
-	context.Set(r, "param_jobid", vars["id"])
-	jb := getJobById(r)
-	if jb == nil {
+	jb,err := getJobById(vars["id"]); if err != nil {
+		req.appendAppError(err)
 		m.respondJSON(w, req, nil, 0)
 		return
 	}
