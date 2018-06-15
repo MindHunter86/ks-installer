@@ -76,7 +76,7 @@ var (
 		errRsviewUnknownApi: "The job failed because of rsview parse failure! It's possible that site layout is not the same as before.",
 	}
 	apiErrorsStatus = map[uint8]int{
-		errNotError:               0,
+		errNotError:               http.StatusOK,
 		errInternalCommonError:    http.StatusInternalServerError,
 		errInternalSqlError:       http.StatusInternalServerError,
 		errApiNotAuthorized:       http.StatusUnauthorized,

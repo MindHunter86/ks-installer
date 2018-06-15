@@ -25,6 +25,7 @@ func (m *httpRequest) createAndSave(req *http.Request) (*httpRequest, error) {
 		return m, e
 	}
 
+	m.status = http.StatusOK
 	return m, e
 }
 

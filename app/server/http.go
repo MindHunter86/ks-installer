@@ -389,10 +389,16 @@ func (m *apiController) respondJSON(w http.ResponseWriter, req *httpRequest, pay
 			RequestId: req.id}
 	}
 
+	globLogger.Debug().Int("http_pre_status", status).Msg("")
+
 	if rspPayload.Errors = req.saveErrors().respondApiErrors(); req.status > status {
 		status = req.status
 		rspPayload.Data = nil
 	}
+
+	req.status = status // TODO: refactor
+
+	globLogger.Debug().Int("http_post_status", status).Msg("")
 
 	w.Header().Set("Content-Type", "application/vnd.api+json")
 	w.WriteHeader(status)
