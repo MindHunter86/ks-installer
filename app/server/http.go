@@ -337,7 +337,7 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	}
 
 	job.setPayload(&map[string]interface{}{
-		"job_input_host": host})
+		"job_payload_host": host})
 
 	job.addToQueue()
 

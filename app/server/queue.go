@@ -130,7 +130,7 @@ func getJobById(req *http.Request) (jb *queueJob) {
 
 func (m *queueJob) appendAppError(aErr *appError) *appError {
 
-	m.errors = append(m.errors, aErr)
+	m.errors = append(m.errors, aErr.setJobId(m.id))
 	m.stateUpdate(jobStatusFailed)
 	m.setFailed()
 	return aErr
@@ -303,10 +303,12 @@ func (m *queueWorker) doJob(jb *queueJob) {
 
 		if e := host.resolveIpmiHostname(); e != nil {
 			jb.appendAppError(e)
+			break
 		}
 
 		if e := host.updateOrCreate(jb.id); e != nil {
 			jb.appendAppError(e)
+			break
 		}
 
 		jb.stateUpdate(jobStatusDone)

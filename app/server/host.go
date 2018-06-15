@@ -74,7 +74,7 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 
 func (m *baseHost) foundProperties() (bool, *appError) {
 
-	rws,e := globSqlDB.Query("SELECT id,ipmi_address,updated_at,created_by WHERE hostname = ? LIMIT 2", m.hostname)
+	rws,e := globSqlDB.Query("SELECT id,ipmi_address,updated_at,created_by FROM hosts WHERE hostname = ? LIMIT 2", m.hostname)
 	if e != nil {
 		return false,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
