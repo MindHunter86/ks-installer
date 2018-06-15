@@ -4,6 +4,7 @@ import "errors"
 import "runtime"
 import "strings"
 import "net/http"
+import "database/sql"
 import "github.com/satori/go.uuid"
 import "github.com/rs/zerolog"
 
@@ -148,7 +149,7 @@ func (m *appError) save() bool {
 
 	_,e := globSqlDB.Exec(
 		"INSERT INTO errors (id,job_id,request_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?,?)",
-		m.id, m.jobId, m.requestId, m.code, m.getErrorTitle(), m.getHumanDetails())
+		m.id, getSqlString(m.jobId), getSqlString(m.requestId), m.code, m.getErrorTitle(), m.getHumanDetails())
 
 	if e != nil {
 		globLogger.Error().Err(e).Uint8("errCode", m.code).Str("errTitle", m.getErrorTitle()).Msg("Could not save the error!!!")
@@ -177,14 +178,6 @@ func (m *appError) log(e error, msg string, ctx ...zerolog.Context) *appError { 
 
 	return m
 }
-
-/*
-
-ae := newAppError(errNoError)
-ae.log(e, "Hellow fucking world!")
-ae.log(e, "Hellow fucking world!", ae.glCtx().Str("1234", "1234").Uint8("ecode", errNotError))
-
-*/
 
 func (m *appError) getHttpStatusCode() int {
 	return apiErrorsStatus[m.code]
@@ -217,4 +210,16 @@ func (m *apiError) getId() string {
 		m.eId = uuid.NewV4().String()
 	}
 	return m.eId
+}
+
+func getSqlString(in string) (out sql.NullString) {
+
+	out.String = in
+
+	if in == "" {
+		return
+	}
+
+	out.Valid = true
+	return
 }

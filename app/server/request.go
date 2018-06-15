@@ -43,55 +43,50 @@ func (m *httpRequest) updateAndSave() {
 }
 
 func (m *httpRequest) appendAppError(aErr *appError) *appError {
-	m.errors = append(m.errors, aErr)
+	m.errors = append(m.errors, aErr.setRequestId(m.id))
 	return aErr
 }
 
 // TODO: 2DELETE !!!
 func (m *httpRequest) newError(e uint8) (err *appError) {
 	err = newAppError(e)
-	m.errors = append(m.errors, err)
+	m.errors = append(m.errors, err.setRequestId(m.id))
 	return err
 }
 
-// TODO REFACTOR
 func (m *httpRequest) respondApiErrors() []*responseError {
+
 	var rspErrors []*responseError
 
 	for _, v := range m.errors {
 		rspErrors = append(rspErrors, &responseError{
 			Id:     v.id,
 			Code:   int(v.code),
-			Status: apiErrorsStatus[v.code],
-			Title:  apiErrorsTitle[v.code],
-			Detail: apiErrorsDetail[v.code]})
+			Status: v.getHttpStatusCode(),
+			Title:  v.getErrorTitle(),
+			Detail: v.getHumanDetails()})
 		//	Source: &errorSource{
 		//		Parameter: v.srcParam}})
 
-		if apiErrorsStatus[v.code] > m.status {
-			m.status = apiErrorsStatus[v.code]
+		if v.getHttpStatusCode() > m.status {
+			m.status = v.getHttpStatusCode()
 		}
 	}
 
 	return rspErrors
 }
 
-func (m *httpRequest) saveErrors() *httpRequest { // TODO REFACTOR THIS SHIT. Use (*appErr).save() method!
-	stmt, e := globSqlDB.Prepare("INSERT INTO errors (id,request_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?)")
-	if e != nil {
-		globLogger.Error().Err(e).Msg("[REQUEST]: Could not prepare DB statement!")
-		m.newError(errInternalSqlError)
-		return m
-	}
-	defer stmt.Close()
+func (m *httpRequest) saveErrors() *httpRequest {
 
 	for _, v := range m.errors {
-		globLogger.Info().Str("request_link", m.link).Int("http_code", apiErrorsStatus[v.code]).Str("error_id", v.id).Str("error_title", apiErrorsTitle[v.code]).Msg("[REQUEST]:")
-
-		_, e = stmt.Exec(v.id, m.id, v.code, apiErrorsTitle[v.code], apiErrorsDetail[v.code])
-		if e != nil {
-			globLogger.Error().Err(e).Str("error_id", v.id).Msg("[REQUEST]: Could not write error report!")
+		if v.save() {
+			globLogger.Debug().Str("request_link", m.link).Int("http_code", v.getHttpStatusCode()).Str("error_id", v.id).Str("error_title", v.getErrorTitle()).Msg("|SAVED|")
+			continue
 		}
+
+		globLogger.Debug().Str("request_link", m.link).Int("http_code", v.getHttpStatusCode()).Str("error_id", v.id).Str("error_title", v.getErrorTitle()).Msg("|!NOT SAVED!|")
+		m.appendAppError(newAppError(errInternalSqlError))
+		break
 	}
 
 	return m
