@@ -70,6 +70,7 @@ type (
 	jobsPayload struct {
 		Action string `json:"action,omitempty"`
 		State  string `json:"state,omitempty"`
+		// TODO: add Errors
 	}
 	responseError struct {
 		Id     string       `json:"id,omitempty"`
