@@ -382,6 +382,11 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			jb.appendAppError(e)
 			return
 		}
+		if host == nil {
+			err := newAppError(errHostsNotFound).log(nil, "Couldn't find a host from current request!")
+			jb.appendAppError(err)
+			return
+		}
 
 		if !port.compareLLDPWithHost(host.hostname) {
 			err := newAppError(errRsviewLLDPMismatch)
