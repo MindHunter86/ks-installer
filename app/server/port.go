@@ -83,11 +83,6 @@ func (m *basePort) parseRsviewProperties() *appError {
 		return newAppError(errRsviewUnknownVLAN).log(nil, "Given VLANs don't have configuration matches!")
 	}
 
-	// parse rsview zonename:
-//	if rsResult[rsviewTableZoneName] != globConfig.Base.Rsview.Access.Zone {
-//		return newAppError(errRsviewUnknownZone).log(nil, "Given Zonename doesn't have configuration matches!")
-//	}
-
 	// parse port name:
 	for _,v := range globConfig.Base.Rsview.Access.Port_Names {
 		if strings.Contains(rsResult[rsviewTablePort], v) {

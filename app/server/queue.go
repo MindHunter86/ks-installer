@@ -342,7 +342,7 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			// and set Pending state! XXX
 		}
 
-		host,e = getTinyHostByJobId(reqHostJob.id)
+		host,e := getTinyHostByJobId(reqHostJob.id)
 		if e != nil {
 			jb.appendAppError(e)
 			return
