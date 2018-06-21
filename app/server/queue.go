@@ -20,10 +20,10 @@ const (
 
 var (
 	jobActHumanDetail = map[uint8]string{
-		jobActServerPing:        "Server ping",
-		jobActHostCreate: "Processing the received request to create a host",
-		jobActRsviewParse:       "Rsview parsing",
-		jobActIcqSendMess:       "ICQ message sending",
+		jobActServerPing:  "Server ping",
+		jobActHostCreate:  "Processing the received request to create a host",
+		jobActRsviewParse: "Rsview parsing",
+		jobActIcqSendMess: "ICQ message sending",
 	}
 
 	jobStatusHumanDetail = map[uint8]string{
@@ -37,9 +37,9 @@ var (
 
 type (
 	queueJob struct {
-		payload *map[string]interface{}
+		payload    *map[string]interface{}
 		fail_count int
-		errors []*appError
+		errors     []*appError
 
 		id           string
 		requested_by string
@@ -74,75 +74,75 @@ func newQueueJob(reqId *string, act uint8) (*queueJob, *appError) {
 		updated_at:   time.Now(),
 		created_at:   time.Now()}
 
-	if _,e := globSqlDB.Exec(
+	if _, e := globSqlDB.Exec(
 		"INSERT INTO jobs (id, requested_by, action, updated_at, created_at) VALUES (?,?,?,?,?)",
 		jb.id, jb.requested_by, jb.action,
 		jb.updated_at.Format("2006-01-02 15:04:05.999999"), jb.created_at.Format("2006-01-02 15:04:05.999999")); e != nil {
 
-		return nil,newAppError(errInternalCommonError).log(e, "Could not create a new job because of a database error!")
+		return nil, newAppError(errInternalCommonError).log(e, "Could not create a new job because of a database error!")
 	}
 
-	return jb,nil
+	return jb, nil
 }
 
 func getJobById(jobId string) (*queueJob, *appError) {
 
 	jb := new(queueJob)
 
-	rws,e := globSqlDB.Query("SELECT action,state,updated_at,created_at FROM jobs WHERE id=? LIMIT 2", jobId);
+	rws, e := globSqlDB.Query("SELECT action,state,updated_at,created_at FROM jobs WHERE id=? LIMIT 2", jobId)
 	if e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+		return nil, newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
 	defer rws.Close()
 
-	if ! rws.Next() {
+	if !rws.Next() {
 		if rws.Err() != nil {
-			return nil,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
+			return nil, newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
-		return nil,newAppError(errJobsJobNotFound).log(nil, "The requested job was not found!")
+		return nil, newAppError(errJobsJobNotFound).log(nil, "The requested job was not found!")
 	}
 
 	if e = rws.Scan(&jb.action, &jb.state, &jb.updated_at, &jb.created_at); e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+		return nil, newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
 	}
 
 	if rws.Next() {
-		return nil,newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
+		return nil, newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
 	}
 
 	jb.id = jobId
-	return jb,nil
+	return jb, nil
 }
 
 func getTinyJobByReqId(reqId string, jobAct uint8) (*queueJob, *appError) {
 
-	rws,e := globSqlDB.Query("SELECT id,state FROM jobs WHERE requested_by = ? AND action = ? LIMIT 2", reqId, jobAct)
+	rws, e := globSqlDB.Query("SELECT id,state FROM jobs WHERE requested_by = ? AND action = ? LIMIT 2", reqId, jobAct)
 	if e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+		return nil, newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
 	defer rws.Close()
 
-	if ! rws.Next() {
+	if !rws.Next() {
 		if rws.Err() != nil {
-			return nil,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
+			return nil, newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
-		return nil,nil
+		return nil, nil
 	}
 
 	var jb = &queueJob{
-		action: jobAct,
+		action:       jobAct,
 		requested_by: reqId,
 	}
 
 	if e = rws.Scan(&jb.id, &jb.state); e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+		return nil, newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
 	}
 
 	if rws.Next() {
-		return nil,newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
+		return nil, newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
 	}
 
-	return jb,nil
+	return jb, nil
 }
 
 func (m *queueJob) appendAppError(aErr *appError) *appError {
@@ -155,11 +155,11 @@ func (m *queueJob) appendAppError(aErr *appError) *appError {
 
 		m.setFailed()
 
-		for _,v := range m.errors {
+		for _, v := range m.errors {
 			v.save()
 		}
 
-	// TODO: add icq notify
+		// TODO: add icq notify
 
 		return aErr
 	}
@@ -177,7 +177,7 @@ func (m *queueJob) setFailed() *appError {
 		return err
 	}
 
-	if _,e := globSqlDB.Exec("UPDATE jobs SET is_failed = 1 WHERE id=?", m.id); e != nil {
+	if _, e := globSqlDB.Exec("UPDATE jobs SET is_failed = 1 WHERE id=?", m.id); e != nil {
 		return newAppError(errInternalSqlError).log(e, "Could not exec the database query!")
 	}
 
@@ -188,7 +188,7 @@ func (m *queueJob) stateUpdate(state uint8) *appError {
 
 	m.state = state
 
-	if _,e := globSqlDB.Exec("UPDATE jobs SET state = ? WHERE id = ?", state, m.id); e != nil {
+	if _, e := globSqlDB.Exec("UPDATE jobs SET state = ? WHERE id = ?", state, m.id); e != nil {
 		return newAppError(errInternalSqlError).log(e, "Could not exec the database query!")
 	}
 
@@ -260,7 +260,6 @@ func (m *queueDispatcher) dispatch() {
 		}
 	}
 
-
 	// TODO: add sync.WaitGroup
 	// BUG: jobQueue without close()
 }
@@ -329,7 +328,7 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			return
 		}
 
-		reqHostJob,e := getTinyJobByReqId(jb.requested_by, jobActHostCreate)
+		reqHostJob, e := getTinyJobByReqId(jb.requested_by, jobActHostCreate)
 		if e != nil {
 			jb.appendAppError(e)
 			return
@@ -342,13 +341,13 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			// and set Pending state! XXX
 		}
 
-		host,e := getTinyHostByJobId(reqHostJob.id)
+		host, e := getTinyHostByJobId(reqHostJob.id)
 		if e != nil {
 			jb.appendAppError(e)
 			return
 		}
 
-		if ! port.compareLLDPWithHost(host.hostname) {
+		if !port.compareLLDPWithHost(host.hostname) {
 			err := newAppError(errRsviewLLDPMismatch)
 			jb.appendAppError(err)
 			return

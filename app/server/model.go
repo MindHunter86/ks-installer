@@ -127,8 +127,8 @@ func (m *hostModel) createNewHost(ipmiIp *string) *baseHost {
 
 	var buf bytes.Buffer
 	//if _, e := buf.WriteString(host.resolveIpmiHostname()); e != nil {
-		//m.handleError(e, errInternalCommonError, "[HOST]: Bytes buffer - could not write the given string!")
-		//return nil
+	//m.handleError(e, errInternalCommonError, "[HOST]: Bytes buffer - could not write the given string!")
+	//return nil
 	//}
 
 	if buf.Len() == 0 {

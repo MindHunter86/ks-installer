@@ -8,6 +8,7 @@ import "crypto/tls"
 import "net"
 import "net/url"
 import "net/http"
+
 // import "net/http/httputil"
 
 import "bufio"
@@ -81,7 +82,7 @@ func newRsviewClient() (*rsviewClient, *appError) {
 
 	rq, e := http.NewRequest("GET", globConfig.Base.Rsview.Url, nil)
 	if e != nil {
-		return nil,newAppError(errInternalCommonError).log(e, "Could not create new httpRequest!")
+		return nil, newAppError(errInternalCommonError).log(e, "Could not create new httpRequest!")
 	}
 
 	rq.SetBasicAuth(
@@ -95,18 +96,18 @@ func newRsviewClient() (*rsviewClient, *appError) {
 
 	rsp, e := rcl.httpClient.Do(rq)
 	if e != nil {
-		return nil,newAppError(errRsviewGenericError).log(e, "Could not do the request!")
+		return nil, newAppError(errRsviewGenericError).log(e, "Could not do the request!")
 	}
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusOK {
 		if rsp.StatusCode == http.StatusUnauthorized {
-			return nil,newAppError(errRsviewAuthError).log(nil, "Authentication failed in rsview!")
+			return nil, newAppError(errRsviewAuthError).log(nil, "Authentication failed in rsview!")
 		}
 
 		globLogger.Warn().Int("response_code", rsp.StatusCode).Msg("[RSVIEW]: Abnormal response!")
 		ae := newAppError(errRsviewGenericError)
-		return nil,ae.log(nil, "Response code is not 200!", ae.glCtx().Int("http_code", rsp.StatusCode))
+		return nil, ae.log(nil, "Response code is not 200!", ae.glCtx().Int("http_code", rsp.StatusCode))
 	}
 
 	rcl.httpAuthHeader = rsp.Request.Header.Get("Authorization")
@@ -160,7 +161,7 @@ func (m *rsviewClient) getPortAttributes(mac net.HardwareAddr) ([]string, *appEr
 
 	rq, e := http.NewRequest("GET", rqUrl.String(), nil)
 	if e != nil {
-		return nil,newAppError(errInternalCommonError).log(e, "Could not create new httpRequest!")
+		return nil, newAppError(errInternalCommonError).log(e, "Could not create new httpRequest!")
 	}
 
 	// mask our request
@@ -173,21 +174,21 @@ func (m *rsviewClient) getPortAttributes(mac net.HardwareAddr) ([]string, *appEr
 
 	rq.Header.Set("Authorization", m.httpAuthHeader)
 
-//	dump, e := httputil.DumpRequest(rq, true)
-//	if e != nil {
-//		return nil,newAppError(errInternalCommonError).log(e, "Request dump error!")
-//	}
-//	globLogger.Debug().Bytes("request", dump).Msg("")
+	//	dump, e := httputil.DumpRequest(rq, true)
+	//	if e != nil {
+	//		return nil,newAppError(errInternalCommonError).log(e, "Request dump error!")
+	//	}
+	//	globLogger.Debug().Bytes("request", dump).Msg("")
 
 	rsp, e := m.httpClient.Do(rq)
 	if e != nil {
-		return nil,newAppError(errRsviewGenericError).log(e, "Could not do the request!")
+		return nil, newAppError(errRsviewGenericError).log(e, "Could not do the request!")
 	}
 	defer rsp.Body.Close()
 
 	if rsp.StatusCode != http.StatusOK {
 		ae := newAppError(errRsviewGenericError)
-		return nil,ae.log(nil, "Response code is not 200!", ae.glCtx().Int("http_code", rsp.StatusCode))
+		return nil, ae.log(nil, "Response code is not 200!", ae.glCtx().Int("http_code", rsp.StatusCode))
 	}
 
 	// TODO: XXX: Do we need JUN rescan before page parse ?
@@ -208,7 +209,7 @@ LOOP:
 		switch z.Next() {
 		case html.ErrorToken:
 			if z.Err() != io.EOF {
-				return buf,newAppError(errInternalCommonError).log(z.Err(), "Tokenizer generic error!")
+				return buf, newAppError(errInternalCommonError).log(z.Err(), "Tokenizer generic error!")
 			}
 			break LOOP
 
@@ -266,16 +267,16 @@ LOOP:
 	}
 
 	if len(buf) == 0 {
-		return buf,newAppError(errRsviewMacNotFound).log(nil, "Buffer is empty after parsing (seems mac was not found)!")
+		return buf, newAppError(errRsviewMacNotFound).log(nil, "Buffer is empty after parsing (seems mac was not found)!")
 	}
 
 	if len(buf) != len(rsviewTableHuman) {
-		return buf,newAppError(errRsviewUnknownApi).log(nil, "Comparison of buffer and template failed! Check rsview site layout!")
+		return buf, newAppError(errRsviewUnknownApi).log(nil, "Comparison of buffer and template failed! Check rsview site layout!")
 	}
 
 	for k, v := range buf {
 		globLogger.Debug().Str("human", rsviewTableHuman[uint8(k)]).Str("value", v).Msg("parsed value")
 	}
 
-	return buf,nil
+	return buf, nil
 }

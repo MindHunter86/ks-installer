@@ -212,7 +212,8 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	jb,err := getJobById(vars["id"]); if err != nil {
+	jb, err := getJobById(vars["id"])
+	if err != nil {
 		req.appendAppError(err)
 		m.respondJSON(w, req, nil, 0)
 		return
@@ -310,8 +311,8 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	}
 
 	var ports []*basePort
-	for _,v := range macAddrs {
-		if port,e := newPortWithMAC(v); e != nil {
+	for _, v := range macAddrs {
+		if port, e := newPortWithMAC(v); e != nil {
 			req.appendAppError(e)
 		} else {
 			ports = append(ports, port)
@@ -326,7 +327,7 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	// add jobs and respond:
 	var reqJobs []*queueJob
 
-	if job,err := newQueueJob(&req.id, jobActHostCreate); err != nil {
+	if job, err := newQueueJob(&req.id, jobActHostCreate); err != nil {
 		req.appendAppError(err)
 		m.respondJSON(w, req, nil, 0)
 		return
@@ -336,8 +337,8 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		reqJobs = append(reqJobs, job)
 	}
 
-	for _,v := range ports {
-		if job,err := newQueueJob(&req.id, jobActRsviewParse); err != nil {
+	for _, v := range ports {
+		if job, err := newQueueJob(&req.id, jobActRsviewParse); err != nil {
 			req.appendAppError(err)
 			m.respondJSON(w, req, nil, 0)
 			return
@@ -350,13 +351,13 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	}
 
 	var jobResponses []*jobAttributesJob
-	for _,v := range reqJobs {
+	for _, v := range reqJobs {
 
 		jobResponses = append(jobResponses, &jobAttributesJob{
 			Id: v.id,
 			Payload: &jobsPayload{
 				Action: jobActHumanDetail[v.action],
-				State: jobStatusHumanDetail[v.action],
+				State:  jobStatusHumanDetail[v.action],
 			},
 			Updated_At: v.updated_at.String(),
 			Created_At: v.created_at.String(),

@@ -60,15 +60,15 @@ var (
 		errRsviewGenericError:     "Rsview internal error",
 		errRsviewAuthError:        "Rsview authorization error",
 		errRsviewAuthTestFail:     "Rsview client test error",
-		errRsviewParseError: "Rsview parse generic error",
-		errRsviewUnknownApi: "Rsview parse error",
-		errRsviewUnknownVLAN: "Rsview result parse mismatch",
-		errRsviewUnknownZone: "Rsview result parse mismatch",
-		errRsviewUnknownPort: "Rsview result parse mismatch",
-		errRsviewUnknownJun: "Rsview result parse mismatch",
-		errRsviewUnknownLLDP: "Rsview result parse mismatch",
-		errRsviewLLDPMismatch: "Rsview comparison failure",
-		errRsviewMacNotFound: "Rsview parse generic error",
+		errRsviewParseError:       "Rsview parse generic error",
+		errRsviewUnknownApi:       "Rsview parse error",
+		errRsviewUnknownVLAN:      "Rsview result parse mismatch",
+		errRsviewUnknownZone:      "Rsview result parse mismatch",
+		errRsviewUnknownPort:      "Rsview result parse mismatch",
+		errRsviewUnknownJun:       "Rsview result parse mismatch",
+		errRsviewUnknownLLDP:      "Rsview result parse mismatch",
+		errRsviewLLDPMismatch:     "Rsview comparison failure",
+		errRsviewMacNotFound:      "Rsview parse generic error",
 	}
 	apiErrorsDetail = map[uint8]string{
 		errNotError:               "",
@@ -86,15 +86,15 @@ var (
 		errRsviewGenericError:     "The job failed because of an rsview internal error!",
 		errRsviewAuthError:        "The job failed because of an rsview authorization failure! Check the rsview credentials and try again.",
 		errRsviewAuthTestFail:     "The job failed because of an rsview client test failure!",
-		errRsviewParseError: "The job failed because of rsview parse failure!",
-		errRsviewUnknownApi: "The job failed because of rsview parse failure! It's possible that site layout is not the same as before.",
-		errRsviewUnknownVLAN: "The job failed because of rsview parse failure! Parsed VLAN does not match the configuration!",
-		errRsviewUnknownZone: "The job failed because of rsview parse failure! Parsed ZoneName does not match the configuration!",
-		errRsviewUnknownPort: "The job failed because of rsview parse failure! Parsed Port does not match the configuration!",
-		errRsviewUnknownJun: "The job failed because of rsview parse failure! Parsed Jun does not match the configuration!",
-		errRsviewUnknownLLDP: "The job failed because of rsview parse failure! Parsed LLDP host does not valid!",
-		errRsviewLLDPMismatch: "The job failed because of a failure to compare the lldp and ipmi hostname!",
-		errRsviewMacNotFound: "The requested MAC address was not found in the database!",
+		errRsviewParseError:       "The job failed because of rsview parse failure!",
+		errRsviewUnknownApi:       "The job failed because of rsview parse failure! It's possible that site layout is not the same as before.",
+		errRsviewUnknownVLAN:      "The job failed because of rsview parse failure! Parsed VLAN does not match the configuration!",
+		errRsviewUnknownZone:      "The job failed because of rsview parse failure! Parsed ZoneName does not match the configuration!",
+		errRsviewUnknownPort:      "The job failed because of rsview parse failure! Parsed Port does not match the configuration!",
+		errRsviewUnknownJun:       "The job failed because of rsview parse failure! Parsed Jun does not match the configuration!",
+		errRsviewUnknownLLDP:      "The job failed because of rsview parse failure! Parsed LLDP host does not valid!",
+		errRsviewLLDPMismatch:     "The job failed because of a failure to compare the lldp and ipmi hostname!",
+		errRsviewMacNotFound:      "The requested MAC address was not found in the database!",
 	}
 	apiErrorsStatus = map[uint8]int{ // TODO: try to use 4XX instead of 5XX
 		errNotError:               http.StatusOK,
@@ -112,15 +112,15 @@ var (
 		errRsviewGenericError:     http.StatusInternalServerError,
 		errRsviewAuthError:        http.StatusInternalServerError,
 		errRsviewAuthTestFail:     http.StatusInternalServerError,
-		errRsviewParseError: http.StatusInternalServerError,
-		errRsviewUnknownApi: http.StatusInternalServerError,
-		errRsviewUnknownVLAN: http.StatusInternalServerError,
-		errRsviewUnknownZone: http.StatusInternalServerError,
-		errRsviewUnknownPort: http.StatusInternalServerError,
-		errRsviewUnknownJun: http.StatusInternalServerError,
-		errRsviewUnknownLLDP: http.StatusInternalServerError,
-		errRsviewLLDPMismatch: http.StatusInternalServerError,
-		errRsviewMacNotFound: http.StatusNotFound,
+		errRsviewParseError:       http.StatusInternalServerError,
+		errRsviewUnknownApi:       http.StatusInternalServerError,
+		errRsviewUnknownVLAN:      http.StatusInternalServerError,
+		errRsviewUnknownZone:      http.StatusInternalServerError,
+		errRsviewUnknownPort:      http.StatusInternalServerError,
+		errRsviewUnknownJun:       http.StatusInternalServerError,
+		errRsviewUnknownLLDP:      http.StatusInternalServerError,
+		errRsviewLLDPMismatch:     http.StatusInternalServerError,
+		errRsviewMacNotFound:      http.StatusNotFound,
 	}
 
 	// telegram errors:
@@ -136,10 +136,10 @@ type apiError struct {
 }
 
 type appError struct {
-	id string
-	code uint8
-	prefix string
-	jobId string
+	id        string
+	code      uint8
+	prefix    string
+	jobId     string
 	requestId string
 }
 
@@ -156,10 +156,10 @@ func newAppError(e uint8) *appError {
 
 	fName := strings.Split(rawFuncName, "/")
 
-	return &appError {
-		id: uuid.NewV4().String(),
+	return &appError{
+		id:     uuid.NewV4().String(),
 		prefix: fName[len(fName)-1:][0],
-		code: e,
+		code:   e,
 	}
 }
 
@@ -175,7 +175,7 @@ func (m *appError) setRequestId(rId string) *appError {
 
 func (m *appError) save() bool {
 
-	_,e := globSqlDB.Exec(
+	_, e := globSqlDB.Exec(
 		"INSERT INTO errors (id,job_id,request_id,internal_code,displayed_title,displayed_detail) VALUES (?,?,?,?,?,?)",
 		m.id, getSqlString(m.jobId), getSqlString(m.requestId), m.code, m.getErrorTitle(), m.getHumanDetails())
 
@@ -202,7 +202,7 @@ func (m *appError) log(e error, msg string, ctx ...zerolog.Context) *appError { 
 	}
 
 	patchedLogger := globLoggerCtx.Err(e).Logger()
-	patchedLogger.Error().Msgf("[%s]: " + msg, m.prefix)
+	patchedLogger.Error().Msgf("[%s]: "+msg, m.prefix)
 
 	return m
 }

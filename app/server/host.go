@@ -11,31 +11,31 @@ type (
 		id           string
 		hostname     string
 		ipmi_address *net.IP
-		created_by string
-		updated_at time.Time
+		created_by   string
+		updated_at   time.Time
 	}
 )
 
 func newHost() *baseHost {
 	return &baseHost{
-		id:  uuid.NewV4().String(),
+		id: uuid.NewV4().String(),
 	}
 }
 
 func getTinyHostByJobId(jbId string) (*baseHost, *appError) {
 
-	rws,e := globSqlDB.Query("SELECT id, hostname FROM hosts WHERE created_by = ? LIMIT 2", jbId)
+	rws, e := globSqlDB.Query("SELECT id, hostname FROM hosts WHERE created_by = ? LIMIT 2", jbId)
 	if e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+		return nil, newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
 	defer rws.Close()
 
 	if !rws.Next() {
 		if rws.Err() != nil {
-			return nil,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
+			return nil, newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
 
-		return nil,nil
+		return nil, nil
 	}
 
 	var host = &baseHost{
@@ -43,14 +43,14 @@ func getTinyHostByJobId(jbId string) (*baseHost, *appError) {
 	}
 
 	if e := rws.Scan(&host.id, &host.hostname); e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+		return nil, newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
 	}
 
 	if rws.Next() {
-		return nil,newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
+		return nil, newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
 	}
 
-	return host,nil
+	return host, nil
 }
 
 func (m *baseHost) parseIpmiAddress(ipmiIp *string) *appError {
@@ -100,7 +100,8 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 
 	m.created_by = jobId
 
-	ok,e := m.findProperties(); if e != nil {
+	ok, e := m.findProperties()
+	if e != nil {
 		return e
 	}
 
@@ -113,23 +114,23 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 
 func (m *baseHost) findProperties() (bool, *appError) {
 
-	rws,e := globSqlDB.Query("SELECT id,ipmi_address,created_by,updated_at FROM hosts WHERE hostname = ? LIMIT 2", m.hostname)
+	rws, e := globSqlDB.Query("SELECT id,ipmi_address,created_by,updated_at FROM hosts WHERE hostname = ? LIMIT 2", m.hostname)
 	if e != nil {
-		return false,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+		return false, newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
 	defer rws.Close()
 
-	if ! rws.Next() {
+	if !rws.Next() {
 		if rws.Err() != nil {
-			return false,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
+			return false, newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
-		return false,nil
+		return false, nil
 	}
 
 	var oldJobId string
 	var foundIpmiAddr string
 	if e = rws.Scan(&oldJobId, &foundIpmiAddr, &m.created_by, &m.updated_at); e != nil {
-		return false,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+		return false, newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
 	}
 
 	if m.ipmi_address.String() != foundIpmiAddr {
@@ -138,19 +139,19 @@ func (m *baseHost) findProperties() (bool, *appError) {
 	}
 
 	if err := m.parseIpmiAddress(&foundIpmiAddr); err != nil {
-		return false,err
+		return false, err
 	}
 
 	if rws.Next() {
-		return false,newAppError(errInternalCommonError).log(nil, "Rows is not equal to 1. The DB has broken!")
+		return false, newAppError(errInternalCommonError).log(nil, "Rows is not equal to 1. The DB has broken!")
 	}
 
-	return true,nil
+	return true, nil
 }
 
 func (m *baseHost) updateProperties() *appError {
 
-	_,e := globSqlDB.Exec(
+	_, e := globSqlDB.Exec(
 		"UPDATE hosts SET id = ?, ipmi_address = ?, created_by = ? WHERE hostname = ?",
 		m.id, m.ipmi_address.String(), m.created_by, m.hostname)
 	if e != nil {
@@ -162,7 +163,7 @@ func (m *baseHost) updateProperties() *appError {
 
 func (m *baseHost) createProperties() *appError {
 
-	_,e := globSqlDB.Exec(
+	_, e := globSqlDB.Exec(
 		"INSERT INTO hosts (id, hostname, ipmi_address, created_by) VALUES (?,?,?,?)",
 		m.id, m.hostname, m.ipmi_address.String(), m.created_by)
 	if e != nil {
