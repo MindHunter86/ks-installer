@@ -67,7 +67,7 @@ func (m *basePort) parseRsviewProperties() *appError {
 	for _, v := range globConfig.Base.Rsview.Access.Vlans {
 		if strings.Contains(rsResult[rsviewTableVlans], v) {
 			if m.jun_vlan == 0 {
-				buf, e := strconv.ParseUint(v, 16, 16)
+				buf, e := strconv.ParseUint(v, 10, 16)
 				if e == nil {
 					m.jun_vlan = uint16(buf)
 					continue
