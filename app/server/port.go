@@ -1,38 +1,135 @@
 package server
 
-import "time"
 import "net"
+import "strings"
+import "strconv"
+
 
 type basePort struct {
-	name       string
-	jun        uint16
-	vlan       uint16
-	mac        []*net.HardwareAddr
-	updated_at *time.Time
+	mac *net.HardwareAddr
+	jun_name string
+	jun_port_name string
+	jun_vlan uint16
+	lldp_host string
 }
 
 func newPort() *basePort {
 	return &basePort{}
 }
 
-func (m *basePort) parseMacAddress(mac []*string) *appError {
+func newPortWithMAC(mac *string) (*basePort, *appError) {
 
-	for _,v := range mac {
-		hwAddr,e := net.ParseMAC(*v); if e != nil {
-			ae := newAppError(errPortsAbnormalMac)
-			return ae.log(e, "Could not parse the given MAC address!", ae.glCtx().Str("mac", *v))
+	var e error
+	var port *basePort = newPort()
+
+	if *port.mac,e = net.ParseMAC(*mac); e != nil {
+		err := newAppError(errPortsAbnormalMac)
+		return nil,err.log(e, "Could not parse the given MAC address!", err.glCtx().Str("mac", *mac))
+	}
+
+	if _,e = globSqlDB.Exec("INSERT INTO macs (mac) VALUES (?)", port.mac.String()); e != nil {
+		return nil,newAppError(errInternalSqlError).log(e, "Could not save the mac into DB")
+	}
+
+	return port,nil
+}
+
+func (m *basePort) parseRsviewProperties() *appError {
+
+	rsResult,err := globRsview.getPortAttributes(m.mac); if err != nil {
+		return err
+	}
+
+	// parse rsview VLANs:
+	for _,v := range globConfig.Base.Rsview.Access.Vlans {
+		if strings.Contains(rsResult[rsviewTableVlans], v) {
+			if m.jun_vlan == 0 {
+				buf,e := strconv.ParseUint(v, 16, 16); if e == nil {
+					m.jun_vlan = uint16(buf)
+					continue
+				}
+
+				return newAppError(errInternalCommonError).log(e, "Could not convert string to uint16!")
+			}
+
+			globLogger.Warn().Msg("Something is wrong in (*basePort).getRsviewProperties(). Given VLANs have two or more configuration matches!")
 		}
+	}
 
-		m.mac = append(m.mac, &hwAddr)
+	if m.jun_vlan == 0 {
+		return newAppError(errRsviewUnknownVLAN).log(nil, "Given VLANs don't have configuration matches!")
+	}
+
+	// parse rsview zonename:
+	if rsResult[rsviewTableZoneName] != globConfig.Base.Rsview.Access.Zone {
+		return newAppError(errRsviewUnknownZone).log(nil, "Given Zonename doesn't have configuration matches!")
+	}
+
+	// parse port name:
+	for _,v := range globConfig.Base.Rsview.Access.Port_Names {
+		if strings.Compare(rsResult[rsviewTablePort], v) == 0 {
+			if m.jun_port_name == "" {
+				m.jun_port_name = rsResult[rsviewTablePort]
+				continue
+			}
+
+			globLogger.Warn().Msg("Something is wrong in (*basePort).getRsviewProperties(). Given Ports have two or more configuration matches!")
+		}
+	}
+
+	if m.jun_port_name == "" {
+		return newAppError(errRsviewUnknownPort).log(nil, "Given Port doesn't have configuration matches!")
+	}
+
+	// parse jun name:
+	for _,v := range globConfig.Base.Rsview.Access.Jun_Names {
+		if strings.Compare(rsResult[rsviewTableHostname], v) == 0 {
+			if m.jun_name == "" {
+				m.jun_name = rsResult[rsviewTableHostname]
+				continue
+			}
+
+			globLogger.Warn().Msg("Something is wrong in (*basePort).getRsviewProperties(). Given Jun has two or more configuration matches!")
+		}
+	}
+
+	if m.jun_name == "" {
+		return newAppError(errRsviewUnknownJun).log(nil, "Given Jun doesn't have configuration matches!")
+	}
+
+	// parse lldp host:
+	if rsResult[rsviewTableLldp] != "" {
+		if buf := strings.SplitN(rsResult[rsviewTableLldp], ".", 2); len(buf) != 0 {
+			m.lldp_host = buf[0]
+		}
+	}
+
+	if m.lldp_host == "" {
+		return newAppError(errRsviewUnknownLLDP).log(nil, "Given LLDP host does not valid!")
+	}
+
+	return m.updateRsviewProperties()
+}
+
+func (m *basePort) updateRsviewProperties() *appError {
+
+	_,e := globSqlDB.Exec(
+		"UPDATE macs SET jun_name = ?, jun_port_name = ?, jun_vlan = ? WHERE mac = ?",
+		m.jun_name, m.jun_port_name, m.jun_vlan, m.mac.String() )
+	if e != nil {
+		return newAppError(errInternalSqlError).log(nil, "Could not exec the database query!")
 	}
 
 	return nil
 }
 
-func (m *basePort) importAllFields() *appError {
+func (m *basePort) compareLLDPWithHost(hostname string) bool {
 
-	// parse rsview by mac
-	return nil
+	if m.lldp_host == hostname {
+		return true
+	}
+
+	return false
 }
 
 func (m *basePort) rsviewAttributesParse() *appError {

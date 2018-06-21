@@ -22,6 +22,37 @@ func newHost() *baseHost {
 	}
 }
 
+func getTinyHostByJobId(jbId string) (*baseHost, *appError) {
+
+	rws,e := globSqlDB.Query("SELECT id,hostname FROM hosts WHERE created_by = ? LIMIT 2", jbId)
+	if e != nil {
+		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+	}
+	defer rws.Close()
+
+	if !rws.Next() {
+		if rws.Err() != nil {
+			return nil,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
+		}
+
+		return nil,nil
+	}
+
+	var host = &baseHost{
+		created_by: jbId,
+	}
+
+	if e := rws.Scan(&host.id, &host.hostname); e != nil {
+		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+	}
+
+	if rws.Next() {
+		return nil,newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
+	}
+
+	return host,nil
+}
+
 func (m *baseHost) parseIpmiAddress(ipmiIp *string) *appError {
 
 	var ipmiAddr = net.ParseIP(*ipmiIp)
@@ -69,7 +100,7 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 
 	m.created_by = jobId
 
-	ok,e := m.foundProperties(); if e != nil {
+	ok,e := m.findProperties(); if e != nil {
 		return e
 	}
 
@@ -80,7 +111,7 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 	return m.createProperties()
 }
 
-func (m *baseHost) foundProperties() (bool, *appError) {
+func (m *baseHost) findProperties() (bool, *appError) {
 
 	rws,e := globSqlDB.Query("SELECT id,ipmi_address,updated_at,created_by FROM hosts WHERE hostname = ? LIMIT 2", m.hostname)
 	if e != nil {
@@ -132,7 +163,7 @@ func (m *baseHost) updateProperties() *appError {
 func (m *baseHost) createProperties() *appError {
 
 	_,e := globSqlDB.Exec(
-		"INSERT INTO hosts (id, hostname, impi_address, created_by)",
+		"INSERT INTO hosts (id, hostname, ipmi_address, created_by) VALUES (?,?,?,?)",
 		m.id, m.hostname, m.ipmi_address.String(), m.created_by)
 	if e != nil {
 		return newAppError(errInternalSqlError).log(e, "Could not exec the database query!")

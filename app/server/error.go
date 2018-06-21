@@ -27,6 +27,12 @@ const (
 	errRsviewAuthTestFail
 	errRsviewParseError
 	errRsviewUnknownApi
+	errRsviewUnknownVLAN
+	errRsviewUnknownZone
+	errRsviewUnknownPort
+	errRsviewUnknownJun
+	errRsviewUnknownLLDP
+	errRsviewLLDPMismatch
 
 	// telegram errors:
 	errTgUnknownCommand = uint8(iota)
@@ -55,6 +61,12 @@ var (
 		errRsviewAuthTestFail:     "Rsview client test error",
 		errRsviewParseError: "Rsview parse generic error",
 		errRsviewUnknownApi: "Rsview parse error",
+		errRsviewUnknownVLAN: "Rsview result parse mismatch",
+		errRsviewUnknownZone: "Rsview result parse mismatch",
+		errRsviewUnknownPort: "Rsview result parse mismatch",
+		errRsviewUnknownJun: "Rsview result parse mismatch",
+		errRsviewUnknownLLDP: "Rsview result parse mismatch",
+		errRsviewLLDPMismatch: "Rsview comparison failure",
 	}
 	apiErrorsDetail = map[uint8]string{
 		errNotError:               "",
@@ -74,8 +86,14 @@ var (
 		errRsviewAuthTestFail:     "The job failed because of an rsview client test failure!",
 		errRsviewParseError: "The job failed because of rsview parse failure!",
 		errRsviewUnknownApi: "The job failed because of rsview parse failure! It's possible that site layout is not the same as before.",
+		errRsviewUnknownVLAN: "The job failed because of rsview parse failure! Parsed VLAN does not match the configuration!",
+		errRsviewUnknownZone: "The job failed because of rsview parse failure! Parsed ZoneName does not match the configuration!",
+		errRsviewUnknownPort: "The job failed because of rsview parse failure! Parsed Port does not match the configuration!",
+		errRsviewUnknownJun: "The job failed because of rsview parse failure! Parsed Jun does not match the configuration!",
+		errRsviewUnknownLLDP: "The job failed because of rsview parse failure! Parsed LLDP host does not valid!",
+		errRsviewLLDPMismatch: "The job failed because of a failure to compare the lldp and ipmi hostname!",
 	}
-	apiErrorsStatus = map[uint8]int{
+	apiErrorsStatus = map[uint8]int{ // TODO: try to use 4XX instead of 5XX
 		errNotError:               http.StatusOK,
 		errInternalCommonError:    http.StatusInternalServerError,
 		errInternalSqlError:       http.StatusInternalServerError,
@@ -93,6 +111,12 @@ var (
 		errRsviewAuthTestFail:     http.StatusInternalServerError,
 		errRsviewParseError: http.StatusInternalServerError,
 		errRsviewUnknownApi: http.StatusInternalServerError,
+		errRsviewUnknownVLAN: http.StatusInternalServerError,
+		errRsviewUnknownZone: http.StatusInternalServerError,
+		errRsviewUnknownPort: http.StatusInternalServerError,
+		errRsviewUnknownJun: http.StatusInternalServerError,
+		errRsviewUnknownLLDP: http.StatusInternalServerError,
+		errRsviewLLDPMismatch: http.StatusInternalServerError,
 	}
 
 	// telegram errors:

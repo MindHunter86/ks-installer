@@ -132,7 +132,7 @@ func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) *appError {
 	return newAppError(errRsviewAuthTestFail).log(nil, "Client test failed!")
 }
 
-func (m *rsviewClient) parsePortAttributes(mac *net.HardwareAddr) (*[]string, *appError) {
+func (m *rsviewClient) getPortAttributes(mac *net.HardwareAddr) ([]string, *appError) {
 
 	rqUrl, e := url.Parse(globConfig.Base.Rsview.Url)
 
@@ -192,10 +192,10 @@ func (m *rsviewClient) parsePortAttributes(mac *net.HardwareAddr) (*[]string, *a
 
 	// TODO: XXX: Do we need JUN rescan before page parse ?
 
-	return m.parseResponsePage(rsp.Body)
+	return m.parseResponseHTML(rsp.Body)
 }
 
-func (m *rsviewClient) parseResponsePage(rBody io.ReadCloser) (*[]string, *appError) {
+func (m *rsviewClient) parseResponseHTML(rBody io.ReadCloser) ([]string, *appError) {
 
 	var buf []string
 	var trResultCount int
@@ -208,7 +208,7 @@ LOOP:
 		switch z.Next() {
 		case html.ErrorToken:
 			if z.Err() != io.EOF {
-				return &buf,newAppError(errInternalCommonError).log(z.Err(), "Tokenizer generic error!")
+				return buf,newAppError(errInternalCommonError).log(z.Err(), "Tokenizer generic error!")
 			}
 			break LOOP
 
@@ -266,16 +266,16 @@ LOOP:
 	}
 
 	if len(buf) == 0 {
-		return &buf,newAppError(errRsviewParseError).log(nil, "Buffer is empty after parsing!")
+		return buf,newAppError(errRsviewParseError).log(nil, "Buffer is empty after parsing!")
 	}
 
 	if len(buf) != len(rsviewTableHuman) {
-		return &buf,newAppError(errRsviewUnknownApi).log(nil, "Comparison of buffer and template failed! Check rsview site layout!")
+		return buf,newAppError(errRsviewUnknownApi).log(nil, "Comparison of buffer and template failed! Check rsview site layout!")
 	}
 
 	for k, v := range buf {
 		globLogger.Debug().Str("human", rsviewTableHuman[uint8(k)]).Str("value", v).Msg("parsed value")
 	}
 
-	return &buf,nil
+	return buf,nil
 }

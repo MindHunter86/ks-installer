@@ -14,6 +14,7 @@ const (
 	jobStatusCreated = uint8(iota)
 	jobStatusPending
 	jobStatusFailed
+	jobStatusBlocked
 	jobStatusDone
 )
 
@@ -29,6 +30,7 @@ var (
 		jobStatusCreated: "Created",
 		jobStatusPending: "Pending",
 		jobStatusFailed:  "Failed",
+		jobStatusBlocked: "Blocked",
 		jobStatusDone:    "Done",
 	}
 )
@@ -101,7 +103,7 @@ func getJobById(jobId string) (*queueJob, *appError) {
 	}
 
 	if e = rws.Scan(&jb.action, &jb.state, &jb.updated_at, &jb.created_at); e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB")
+		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
 	}
 
 	if rws.Next() {
@@ -109,6 +111,37 @@ func getJobById(jobId string) (*queueJob, *appError) {
 	}
 
 	jb.id = jobId
+	return jb,nil
+}
+
+func getTinyJobByReqId(reqId string, jobAct uint8) (*queueJob, *appError) {
+
+	rws,e := globSqlDB.Query("SELECT id,state FROM jobs WHERE requested_by = ? action = ? LIMIT 2", reqId, jobAct)
+	if e != nil {
+		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+	}
+	defer rws.Close()
+
+	if ! rws.Next() {
+		if rws.Err() != nil {
+			return nil,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
+		}
+		return nil,nil
+	}
+
+	var jb = &queueJob{
+		action: jobAct,
+		requested_by: reqId,
+	}
+
+	if e = rws.Scan(&jb.id, &jb.state); e != nil {
+		return nil,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+	}
+
+	if rws.Next() {
+		return nil,newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
+	}
+
 	return jb,nil
 }
 
@@ -277,13 +310,52 @@ func (m *queueWorker) doJob(jb *queueJob) {
 
 		if e := host.resolveIpmiHostname(); e != nil {
 			jb.appendAppError(e)
-			break
+			return
 		}
 
 		if e := host.updateOrCreate(jb.id); e != nil {
 			jb.appendAppError(e)
-			break
+			return
 		}
+
+		jb.stateUpdate(jobStatusDone)
+
+	case jobActRsviewParse:
+
+		var port = payload["job_payload_port"].(*basePort)
+
+		if e := port.parseRsviewProperties(); e != nil {
+			jb.appendAppError(e)
+			return
+		}
+
+		reqHostJob,e := getTinyJobByReqId(jb.requested_by, jobActHostCreate)
+		if e != nil {
+			jb.appendAppError(e)
+			return
+		}
+
+		jb.stateUpdate(jobStatusBlocked)
+
+		var host *baseHost
+		for ; host == nil; {
+			host,e = getTinyHostByJobId(reqHostJob.id)
+
+			if e != nil {
+				jb.appendAppError(e)
+				return
+			}
+		}
+
+		jb.stateUpdate(jobStatusPending)
+
+		if ! port.compareLLDPWithHost(host.hostname) {
+			err := newAppError(errRsviewLLDPMismatch)
+			jb.appendAppError(err)
+			return
+		}
+
+		// TODO: create task for server installation
 
 		jb.stateUpdate(jobStatusDone)
 

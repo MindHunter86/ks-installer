@@ -43,6 +43,12 @@ type CoreConfig struct {
 				Login, Password string
 				Test_String     string
 			}
+			Access struct { // TODO rename it ?!
+				Zone string
+				Vlans []string
+				Port_Names []string
+				Jun_Names []string
+			}
 		}
 	}
 }

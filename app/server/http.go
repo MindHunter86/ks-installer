@@ -59,7 +59,7 @@ type (
 		Created_At string       `json:"created_at,omitempty"`
 	}
 	dataJobAttributes struct {
-		Job *jobAttributesJob `json:"job,omitempty"`
+		Jobs []*jobAttributesJob `json:"jobs,omitempty"`
 	}
 	jobAttributesJob struct {
 		Id         string       `json:"id,omitempty"`
@@ -218,19 +218,22 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	var jbs = make([]*jobAttributesJob, 1)
+	jbs = append(jbs, &jobAttributesJob{
+		Id: jb.id,
+		Payload: &jobsPayload{
+			Action: jobActHumanDetail[jb.action],
+			State:  jobStatusHumanDetail[jb.state],
+		},
+		Updated_At: jb.updated_at.String(),
+		Created_At: jb.created_at.String(),
+	})
+
 	m.respondJSON(w, req, &responseData{
 		Type: "job",
 		Id:   req.id,
 		JobAttributes: &dataJobAttributes{
-			Job: &jobAttributesJob{
-				Id: jb.id,
-				Payload: &jobsPayload{
-					Action: jobActHumanDetail[jb.action],
-					State:  jobStatusHumanDetail[jb.state],
-				},
-				Updated_At: jb.updated_at.String(),
-				Created_At: jb.created_at.String(),
-			},
+			Jobs: jbs,
 		}}, http.StatusOK)
 }
 
@@ -268,6 +271,8 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		fallthrough
 	case postRequest.Data.Attributes == nil:
 		fallthrough
+	case postRequest.Data.Attributes.Ipmi.Ip_Address == "":
+		fallthrough
 	case postRequest.Data.Attributes.Ports == nil:
 		fallthrough
 	case len(postRequest.Data.Attributes.Ports) == 0:
@@ -283,65 +288,77 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	}
 
 	// test given ipmi && mac addresses:
-	var ipAddr *string
-	if ipAddr = &postRequest.Data.Attributes.Ipmi.Ip_Address; *ipAddr == "" {
-		req.appendAppError(newAppError(errHostsAbnormalIp))
-		m.respondJSON(w, req, nil, 0)
-		return
-	}
+	var ipmiAddr *string = &postRequest.Data.Attributes.Ipmi.Ip_Address
+	var macAddrs []*string
 
-	var macs []*string
 	for _, v := range postRequest.Data.Attributes.Ports {
 		if v.Mac == "" {
 			req.appendAppError(newAppError(errPortsAbnormalMac))
 			m.respondJSON(w, req, nil, 0)
 			return
 		}
-
-		macs = append(macs, &v.Mac)
+		macAddrs = append(macAddrs, &v.Mac)
 	}
 
 	// parse given ipmi && mac addresses:
+
 	var host = newHost()
-	if e := host.parseIpmiAddress(ipAddr); e != nil {
+	if e := host.parseIpmiAddress(ipmiAddr); e != nil {
 		req.appendAppError(e)
 		m.respondJSON(w, req, nil, 0)
 		return
 	}
 
-	var port *basePort = newPort()
-	if e := port.parseMacAddress(macs); e != nil {
-		req.appendAppError(e)
-		m.respondJSON(w, req, nil, 0)
-		return
-	}
+	//for _,v := range macAddrs {
+		// TODO: !!!
+	//}
+	//var port *basePort = newPort()
+	//if e := port.parseMacAddress(macs); e != nil {
+	//	req.appendAppError(e)
+	//	m.respondJSON(w, req, nil, 0)
+	//	return
+	//}
 
 	// add jobs and respond:
-	job,err := newQueueJob(&req.id, jobActHostCreate); if err != nil {
+	var reqJobs []*queueJob
+
+	if job,err := newQueueJob(&req.id, jobActHostCreate); err != nil {
 		req.appendAppError(err)
 		m.respondJSON(w, req, nil, 0)
 		return
+	} else {
+		job.setPayload(&map[string]interface{}{
+			"job_payload_host": host})
+		reqJobs = append(reqJobs, job)
 	}
 
-	job.setPayload(&map[string]interface{}{
-		"job_payload_host": host})
+	//for _,v := range macAddrs {
+		// TODO:
+	//}
 
-	job.addToQueue()
+	var jobResponses []*jobAttributesJob
+	for _,v := range reqJobs {
+
+		jobResponses = append(jobResponses, &jobAttributesJob{
+			Id: v.id,
+			Payload: &jobsPayload{
+				Action: jobActHumanDetail[v.action],
+				State: jobStatusHumanDetail[v.action],
+			},
+			Updated_At: v.updated_at.String(),
+			Created_At: v.created_at.String(),
+		})
+
+		v.addToQueue()
+	}
 
 	m.respondJSON(w, req, &responseData{
 		Type: "job",
 		Id:   req.id,
 		JobAttributes: &dataJobAttributes{
-			Job: &jobAttributesJob{
-				Id: job.id,
-				Payload: &jobsPayload{ // TODO: rename Payload to Properties or Attributes or Meta(-Data)
-					Action: jobActHumanDetail[job.action],
-					State:  jobStatusHumanDetail[job.state],
-				},
-				Updated_At: job.updated_at.String(),
-				Created_At: job.created_at.String(),
-			},
-		}}, http.StatusCreated)
+			Jobs: jobResponses,
+		},
+	}, http.StatusCreated)
 }
 
 func (m *apiController) errorHandler(w http.ResponseWriter, e error, req *httpRequest) bool {
