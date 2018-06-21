@@ -33,11 +33,29 @@ type (
 		Attributes *dataAttributes `json:"attributes,omitempty"`
 	}
 	dataAttributes struct {
-		Jobs []*attributesJobs `json:"jobs,omitempty"`
-		Hosts []*attributesHosts `json:"hosts,omitempty"`
+		Jobs []*attributesJob `json:"jobs,omitempty"`
+		Hosts []*attributesHost `json:"hosts,omitempty"`
 	}
-	attributesHosts struct {} // TODO
-	attributesJobs struct {
+	attributesHost struct {
+		Host *hostsHost `json:"host,omitempty"`
+		Ports []*hostsPort `json:"ports,omitempty"`
+		Updated_At string `json:"updated_at,omitempty"`
+		Created_At string `json:"created_at,omitempty"`
+	}
+	hostsHost struct {
+		Id string `json:",omitempty"`
+		Ipmi_Address string `json:",omitempty"`
+		Ipmi_Ptr string `json:",omitempty"`
+	}
+	hostsPort struct {
+		Mac string `json:"mac,omitempty"`
+		Jun_Name string `json:"jun_name,omitempty"`
+		Jun_Port_Name string `json:"jun_port_name,omitempty"`
+		Jun_Vlan uint16 `json:"jun_vlan,omitempty"`
+		Updated_At string `json:"updated_at,omitempty"`
+		Created_At string `json:"created_at,omitempty"`
+	}
+	attributesJob struct {
 		Id string `json:"id,omitempty"`
 		Action string `json:"action,omitempty"`
 		State string `json:"state,omitempty"`
@@ -50,46 +68,6 @@ type (
 		Code uint8 `json:"code,omitempty"`
 		Title string `json:"title,omitempty"`
 		Details string `json:"details,omitempty"`
-	}
-
-
-
-
-	dataHostAttributes struct {
-		Hostid string                 `json:"hostid,omitempty"`
-		Ipmi   *hostAttributesIpmi    `json:"ipmi,omitempty"`
-		Ports  []*hostAttributesPorts `json:"ports,omitempty"`
-		//	Jobs []string
-		Updated_At *time.Time `json:"updated_at,omitempty"`
-		Created_At *time.Time `json:"created_at,omitempty"`
-	}
-	hostAttributesIpmi struct {
-		Ptr_Name   string `json:"ptr_name,omitempty"`
-		Ip_Address string `json:"ip_address,omitempty"`
-	}
-	hostAttributesPorts struct {
-		Name       string     `json:"name,omitempty"`
-		Jun        uint16     `json:"jun,omitempty"`
-		Vlan       uint16     `json:"vlan,omitempty"`
-		Mac        string     `json:"mac,omitempty"`
-		Updated_At *time.Time `json:"updated_at,omitempty"`
-	}
-	hostAttributesJobs struct {
-		Id         string       `json:"id,omitempty"`
-		Payload    *jobsPayload `json:"payload,omitempty"`
-		Updated_At string       `json:"updated_at,omitempty"`
-		Created_At string       `json:"created_at,omitempty"`
-	}
-	jobAttributesJob struct {
-		Id         string       `json:"id,omitempty"`
-		Payload    *jobsPayload `json:"payload,omitempty"`
-		Updated_At string       `json:"updated_at,omitempty"`
-		Created_At string       `json:"created_at,omitempty"`
-	}
-	jobsPayload struct {
-		Action string `json:"action,omitempty"`
-		State  string `json:"state,omitempty"`
-		// TODO: add Errors
 	}
 	responseError struct {
 		Id     string       `json:"id,omitempty"`
@@ -109,7 +87,7 @@ type (
 	}
 	hostRequestData struct {
 		Type       string              `json:"type"`
-		Attributes *dataHostAttributes `json:"attributes"`
+		Attributes *attributesHost `json:"attributes"`
 	}
 
 	// JSON meta information:
@@ -237,7 +215,7 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	jbs := append([]*attributesJobs{}, &attributesJobs{
+	jbs := append([]*attributesJob{}, &attributesJob{
 		Id: jb.id,
 		Action: jb.getHumanAction(),
 		State: jb.getHumanStateDetails(),
@@ -289,7 +267,9 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		fallthrough
 	case postRequest.Data.Attributes == nil:
 		fallthrough
-	case postRequest.Data.Attributes.Ipmi.Ip_Address == "":
+	case postRequest.Data.Attributes.Host == nil:
+		fallthrough
+	case postRequest.Data.Attributes.Host.Ipmi_Address == "":
 		fallthrough
 	case postRequest.Data.Attributes.Ports == nil:
 		fallthrough
@@ -306,7 +286,7 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	}
 
 	// test given ipmi && mac addresses:
-	var ipmiAddr *string = &postRequest.Data.Attributes.Ipmi.Ip_Address
+	var ipmiAddr *string = &postRequest.Data.Attributes.Host.Ipmi_Address
 	var macAddrs []*string
 
 	for _, v := range postRequest.Data.Attributes.Ports {
@@ -367,9 +347,9 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	var jbResps []*attributesJobs
+	var jbResps []*attributesJob
 	for _,v := range reqJobs {
-		jbResps = append(jbResps, &attributesJobs{
+		jbResps = append(jbResps, &attributesJob{
 			Id: v.id,
 			Action: v.getHumanAction(),
 			Created_At: v.created_at.Format(time.RFC3339),
