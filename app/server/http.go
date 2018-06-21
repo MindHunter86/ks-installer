@@ -309,15 +309,19 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	//for _,v := range macAddrs {
-		// TODO: !!!
-	//}
-	//var port *basePort = newPort()
-	//if e := port.parseMacAddress(macs); e != nil {
-	//	req.appendAppError(e)
-	//	m.respondJSON(w, req, nil, 0)
-	//	return
-	//}
+	var ports []*basePort
+	for _,v := range macAddrs {
+		if port,e := newPortWithMAC(v); e != nil {
+			req.appendAppError(e)
+		} else {
+			ports = append(ports, port)
+		}
+	}
+
+	if len(ports) == 0 {
+		m.respondJSON(w, req, nil, 0)
+		return
+	}
 
 	// add jobs and respond:
 	var reqJobs []*queueJob
@@ -332,9 +336,18 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		reqJobs = append(reqJobs, job)
 	}
 
-	//for _,v := range macAddrs {
-		// TODO:
-	//}
+	for _,v := range ports {
+		if job,err := newQueueJob(&req.id, jobActRsviewParse); err != nil {
+			req.appendAppError(err)
+			m.respondJSON(w, req, nil, 0)
+			return
+		} else {
+			job.setPayload(&map[string]interface{}{
+				"job_payload_port": v,
+			})
+			reqJobs = append(reqJobs, job)
+		}
+	}
 
 	var jobResponses []*jobAttributesJob
 	for _,v := range reqJobs {

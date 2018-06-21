@@ -132,7 +132,7 @@ func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) *appError {
 	return newAppError(errRsviewAuthTestFail).log(nil, "Client test failed!")
 }
 
-func (m *rsviewClient) getPortAttributes(mac *net.HardwareAddr) ([]string, *appError) {
+func (m *rsviewClient) getPortAttributes(mac net.HardwareAddr) ([]string, *appError) {
 
 	rqUrl, e := url.Parse(globConfig.Base.Rsview.Url)
 
@@ -248,7 +248,7 @@ LOOP:
 			tdTextReaded = false
 
 		case html.TextToken:
-			// _ = z.Token() - test it, please (XXX: 2DELETE)
+			_ = z.Token() //- test it, please (XXX: 2DELETE)
 			if !tdClassResult {
 				continue
 			}

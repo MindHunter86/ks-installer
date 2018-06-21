@@ -24,7 +24,7 @@ func newHost() *baseHost {
 
 func getTinyHostByJobId(jbId string) (*baseHost, *appError) {
 
-	rws,e := globSqlDB.Query("SELECT id,hostname FROM hosts WHERE created_by = ? LIMIT 2", jbId)
+	rws,e := globSqlDB.Query("SELECT id, hostname FROM hosts WHERE created_by = ? LIMIT 2", jbId)
 	if e != nil {
 		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
@@ -113,13 +113,14 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 
 func (m *baseHost) findProperties() (bool, *appError) {
 
-	rws,e := globSqlDB.Query("SELECT id,ipmi_address,updated_at,created_by FROM hosts WHERE hostname = ? LIMIT 2", m.hostname)
+	rws,e := globSqlDB.Query("SELECT id,ipmi_address,created_by,updated_at FROM hosts WHERE hostname = ? LIMIT 2", m.hostname)
 	if e != nil {
 		return false,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
 	defer rws.Close()
 
 	if ! rws.Next() {
+		globLogger.Warn().Msg("i'm here")
 		if rws.Err() != nil {
 			return false,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
@@ -128,7 +129,7 @@ func (m *baseHost) findProperties() (bool, *appError) {
 
 	var oldJobId string
 	var foundIpmiAddr string
-	if e = rws.Scan(&oldJobId, &foundIpmiAddr, &m.updated_at); e != nil {
+	if e = rws.Scan(&oldJobId, &foundIpmiAddr, &m.created_by, &m.updated_at); e != nil {
 		return false,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
 	}
 

@@ -6,7 +6,7 @@ import "strconv"
 
 
 type basePort struct {
-	mac *net.HardwareAddr
+	mac net.HardwareAddr
 	jun_name string
 	jun_port_name string
 	jun_vlan uint16
@@ -22,7 +22,7 @@ func newPortWithMAC(mac *string) (*basePort, *appError) {
 	var e error
 	var port *basePort = newPort()
 
-	if *port.mac,e = net.ParseMAC(*mac); e != nil {
+	if port.mac,e = net.ParseMAC(*mac); e != nil {
 		err := newAppError(errPortsAbnormalMac)
 		return nil,err.log(e, "Could not parse the given MAC address!", err.glCtx().Str("mac", *mac))
 	}
