@@ -355,6 +355,7 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			return
 		}
 
+		// TODO: SAVE LINK macs <--> hosts !!!!!
 		// TODO: create task for server installation
 
 		jb.stateUpdate(jobStatusDone)
