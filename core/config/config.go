@@ -8,9 +8,9 @@ import (
 
 type CoreConfig struct {
 	Base struct {
-		Log_Level string
+		Log_Level    string
 		Dns_Resolver string
-		Http      struct {
+		Http         struct {
 			Listen, Host                string
 			Read_Timeout, Write_Timeout int
 		}
@@ -27,10 +27,10 @@ type CoreConfig struct {
 			CIDR_Block   string
 		}
 		Queue struct {
-			Workers         int
-			Worker_Capacity int
-			Jobs_Chain_Buffer    int
-			Max_Job_Fails int
+			Workers             int
+			Worker_Capacity     int
+			Jobs_Chain_Buffer   int
+			Max_Job_Fails       int
 			Jobs_Retry_Interval int
 		}
 		Rsview struct {
@@ -44,9 +44,9 @@ type CoreConfig struct {
 				Test_String     string
 			}
 			Access struct { // TODO rename it ?!
-				Vlans []string
+				Vlans      []string
 				Port_Names []string
-				Jun_Names []string
+				Jun_Names  []string
 			}
 		}
 	}

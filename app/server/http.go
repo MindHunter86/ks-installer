@@ -28,45 +28,45 @@ type (
 	}
 
 	responseData struct {
-		Type string `json:"type,omitempty"`
-		Id string `json:"id,omitempty"`
+		Type       string          `json:"type,omitempty"`
+		Id         string          `json:"id,omitempty"`
 		Attributes *dataAttributes `json:"attributes,omitempty"`
 	}
 	dataAttributes struct {
-		Jobs []*attributesJob `json:"jobs,omitempty"`
+		Jobs  []*attributesJob  `json:"jobs,omitempty"`
 		Hosts []*attributesHost `json:"hosts,omitempty"`
 	}
 	attributesHost struct {
-		Host *hostsHost `json:"host,omitempty"`
-		Ports []*hostsPort `json:"ports,omitempty"`
-		Updated_At string `json:"updated_at,omitempty"`
-		Created_At string `json:"created_at,omitempty"`
+		Host       *hostsHost   `json:"host,omitempty"`
+		Ports      []*hostsPort `json:"ports,omitempty"`
+		Updated_At string       `json:"updated_at,omitempty"`
+		Created_At string       `json:"created_at,omitempty"`
 	}
 	hostsHost struct {
-		Id string `json:",omitempty"`
+		Id           string `json:",omitempty"`
 		Ipmi_Address string `json:",omitempty"`
-		Ipmi_Ptr string `json:",omitempty"`
+		Ipmi_Ptr     string `json:",omitempty"`
 	}
 	hostsPort struct {
-		Mac string `json:"mac,omitempty"`
-		Jun_Name string `json:"jun_name,omitempty"`
+		Mac           string `json:"mac,omitempty"`
+		Jun_Name      string `json:"jun_name,omitempty"`
 		Jun_Port_Name string `json:"jun_port_name,omitempty"`
-		Jun_Vlan uint16 `json:"jun_vlan,omitempty"`
-		Updated_At string `json:"updated_at,omitempty"`
-		Created_At string `json:"created_at,omitempty"`
+		Jun_Vlan      uint16 `json:"jun_vlan,omitempty"`
+		Updated_At    string `json:"updated_at,omitempty"`
+		Created_At    string `json:"created_at,omitempty"`
 	}
 	attributesJob struct {
-		Id string `json:"id,omitempty"`
-		Action string `json:"action,omitempty"`
-		State string `json:"state,omitempty"`
-		Errors []*jobsErrors `json:"errors,omitempty"`
-		Updated_At string `json:"updated_at,omitempty"`
-		Created_At string `json:"created_at,omitempty"`
+		Id         string        `json:"id,omitempty"`
+		Action     string        `json:"action,omitempty"`
+		State      string        `json:"state,omitempty"`
+		Errors     []*jobsErrors `json:"errors,omitempty"`
+		Updated_At string        `json:"updated_at,omitempty"`
+		Created_At string        `json:"created_at,omitempty"`
 	}
 	jobsErrors struct {
-		Id string `json:"id,omitempty"`
-		Code uint8 `json:"code,omitempty"`
-		Title string `json:"title,omitempty"`
+		Id      string `json:"id,omitempty"`
+		Code    uint8  `json:"code,omitempty"`
+		Title   string `json:"title,omitempty"`
 		Details string `json:"details,omitempty"`
 	}
 	responseError struct {
@@ -86,7 +86,7 @@ type (
 		Data *hostRequestData `json:"data"`
 	}
 	hostRequestData struct {
-		Type       string              `json:"type"`
+		Type       string          `json:"type"`
 		Attributes *attributesHost `json:"attributes"`
 	}
 
@@ -208,7 +208,7 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	jbErrs,err := jb.getResponseErrors()
+	jbErrs, err := jb.getResponseErrors()
 	if err != nil {
 		req.appendAppError(err)
 		m.respondJSON(w, req, nil, 0)
@@ -216,17 +216,17 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 	}
 
 	jbs := append([]*attributesJob{}, &attributesJob{
-		Id: jb.id,
-		Action: jb.getHumanAction(),
-		State: jb.getHumanStateDetails(),
-		Errors: jbErrs,
+		Id:         jb.id,
+		Action:     jb.getHumanAction(),
+		State:      jb.getHumanStateDetails(),
+		Errors:     jbErrs,
 		Updated_At: jb.updated_at.Format(time.RFC3339),
 		Created_At: jb.created_at.Format(time.RFC3339),
 	})
 
 	m.respondJSON(w, req, &responseData{
 		Type: "job",
-		Id: req.id,
+		Id:   req.id,
 		Attributes: &dataAttributes{
 			Jobs: jbs,
 		},
@@ -348,10 +348,10 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	}
 
 	var jbResps []*attributesJob
-	for _,v := range reqJobs {
+	for _, v := range reqJobs {
 		jbResps = append(jbResps, &attributesJob{
-			Id: v.id,
-			Action: v.getHumanAction(),
+			Id:         v.id,
+			Action:     v.getHumanAction(),
 			Created_At: v.created_at.Format(time.RFC3339),
 		})
 

@@ -145,13 +145,13 @@ func getTinyJobByReqId(reqId string, jobAct uint8) (*queueJob, *appError) {
 	return jb, nil
 }
 
-func (m *queueJob) getResponseErrors() ([]*jobsErrors,*appError) {
+func (m *queueJob) getResponseErrors() ([]*jobsErrors, *appError) {
 
 	var jbErrs []*jobsErrors
 
-	rws,e := globSqlDB.Query("SELECT id,internal_code,displayed_title,displayed_detail FROM errors WHERE job_id = ?", m.id)
+	rws, e := globSqlDB.Query("SELECT id,internal_code,displayed_title,displayed_detail FROM errors WHERE job_id = ?", m.id)
 	if e != nil {
-		return jbErrs,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+		return jbErrs, newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
 	defer rws.Close()
 
@@ -160,17 +160,17 @@ func (m *queueJob) getResponseErrors() ([]*jobsErrors,*appError) {
 		var jbErr = &jobsErrors{}
 
 		if e := rws.Scan(&jbErr.Id, &jbErr.Code, &jbErr.Title, &jbErr.Details); e != nil {
-			return jbErrs,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+			return jbErrs, newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
 		}
 
 		jbErrs = append(jbErrs, jbErr)
 	}
 
 	if rws.Err() != nil {
-		return jbErrs,newAppError(errInternalSqlError).log(e, "Could not exec rows.Next method!")
+		return jbErrs, newAppError(errInternalSqlError).log(e, "Could not exec rows.Next method!")
 	}
 
-	return jbErrs,nil
+	return jbErrs, nil
 }
 
 func (m *queueJob) appendAppError(aErr *appError) *appError {

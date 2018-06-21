@@ -153,7 +153,7 @@ func (m *basePort) compareLLDPWithHost(hostname string) bool {
 
 func (m *basePort) linkWithHost(hId string) *appError {
 
-	if _,e := globSqlDB.Exec("UPDATE macs SET host = ? WHERE mac = ?", hId, m.mac.String()); e != nil {
+	if _, e := globSqlDB.Exec("UPDATE macs SET host = ? WHERE mac = ?", hId, m.mac.String()); e != nil {
 		return newAppError(errInternalSqlError).log(e, "Could not save the mac into DB!")
 	}
 
