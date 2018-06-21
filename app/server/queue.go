@@ -149,7 +149,7 @@ func (m *queueJob) getResponseErrors() ([]*jobsErrors,*appError) {
 
 	var jbErrs []*jobsErrors
 
-	rws,e := globSqlDB.Query("SELECT id,internal_code,title,details FROM errors WHERE job_id = ?")
+	rws,e := globSqlDB.Query("SELECT id,internal_code,displayed_title,displayed_detail FROM errors WHERE job_id = ?", m.id)
 	if e != nil {
 		return jbErrs,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}

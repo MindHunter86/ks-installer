@@ -25,7 +25,6 @@ type (
 		Meta    *responseMeta    `json:"meta,omitempty"`
 		JsonApi *responseJsonApi `json:"jsonapi,omitempty"`
 		Links   *responseLinks   `json:"links,omitempty"`
-		Debug   *responseDebug   `json:"debug,omitempty"`
 	}
 
 	responseData struct {
@@ -34,7 +33,7 @@ type (
 		Attributes *dataAttributes `json:"attributes,omitempty"`
 	}
 	dataAttributes struct {
-		Jobs []*attributesJobs `json:":jobs,omitempty"`
+		Jobs []*attributesJobs `json:"jobs,omitempty"`
 		Hosts []*attributesHosts `json:"hosts,omitempty"`
 	}
 	attributesHosts struct {} // TODO
@@ -129,11 +128,6 @@ type (
 	responseJsonApi struct {
 		Version string `json:"version"`
 	}
-
-	// JSON debug:
-	responseDebug struct {
-		RequestId string `json:"request_id,omitempty"`
-	}
 )
 
 func NewApiController() *mux.Router {
@@ -204,9 +198,6 @@ func (m *apiController) httpMiddlewareAPIAuthentication(h http.Handler) http.Han
 		if !m.errorHandler(w, e, req) {
 			return
 		}
-
-		globLogger.Debug().Str("mac_expected", hex.EncodeToString(expectedMAC)).Msg("[API]: HMAC sings comparison")
-		globLogger.Debug().Str("mac_received", strings.Split(r.Header.Get("Authorization"), " ")[1]).Msg("[API]: HMAC signs comparison")
 
 		if !hmac.Equal(expectedMAC, receivedMAC) {
 			req.newError(errApiNotAuthorized)
@@ -376,16 +367,11 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	var jobResponses []*jobAttributesJob
-	for _, v := range reqJobs {
-
-		jobResponses = append(jobResponses, &jobAttributesJob{
+	var jbResps []*attributesJobs
+	for _,v := range reqJobs {
+		jbResps = append(jbResps, &attributesJobs{
 			Id: v.id,
-			Payload: &jobsPayload{
-				Action: jobActHumanDetail[v.action],
-				State:  jobStatusHumanDetail[v.action],
-			},
-			Updated_At: v.updated_at.String(),
+			Action: v.getHumanAction(),
 			Created_At: v.created_at.String(),
 		})
 
@@ -395,9 +381,9 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	m.respondJSON(w, req, &responseData{
 		Type: "job",
 		Id:   req.id,
-		//JobAttributes: &dataJobAttributes{
-			//Jobs: jobResponses,
-		//},
+		Attributes: &dataAttributes{
+			Jobs: jbResps,
+		},
 	}, http.StatusCreated)
 }
 
@@ -426,11 +412,6 @@ func (m *apiController) respondJSON(w http.ResponseWriter, req *httpRequest, pay
 			Self: req.link},
 		JsonApi: &responseJsonApi{
 			Version: "1.0"},
-	}
-
-	if globLogger.Debug().Enabled() {
-		rspPayload.Debug = &responseDebug{
-			RequestId: req.id}
 	}
 
 	if rspPayload.Errors = req.saveErrors().respondApiErrors(); req.status > status {
