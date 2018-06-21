@@ -382,6 +382,7 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			jb.appendAppError(e)
 			return
 		}
+
 		if host == nil {
 			err := newAppError(errHostsNotFound).log(nil, "Couldn't find a host from current request!")
 			jb.appendAppError(err)
@@ -394,7 +395,11 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			return
 		}
 
-		// TODO: SAVE LINK macs <--> hosts !!!!!
+		if e = port.linkWithHost(host.id); e != nil {
+			jb.appendAppError(e)
+			return
+		}
+
 		// TODO: create task for server installation
 
 		jb.stateUpdate(jobStatusDone)

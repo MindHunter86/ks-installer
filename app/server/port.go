@@ -43,7 +43,7 @@ func (m *basePort) getOrCreate() *appError {
 		}
 
 		if _, e = globSqlDB.Exec("INSERT INTO macs (mac) VALUES (?)", m.mac.String()); e != nil {
-			return newAppError(errInternalSqlError).log(e, "Could not save the mac into DB")
+			return newAppError(errInternalSqlError).log(e, "Could not save the mac into DB!")
 		}
 
 		return nil
@@ -151,40 +151,11 @@ func (m *basePort) compareLLDPWithHost(hostname string) bool {
 	return false
 }
 
-func (m *basePort) rsviewAttributesParse() *appError {
+func (m *basePort) linkWithHost(hId string) *appError {
 
-	// var rsResult []*string
-
-	//for _,v := range m.mac {
-
-	//rsResult,e := globRsview.parsePortAttributes(v); if e != nil {
-	//	return e
-	//}
-
-	// SOME MAGIC; SOME LOGIC
-
-	// todo/plan:
-	// - check vlan
-	// - check jun
-	// - check zone name
-
-	// - get req id, get all jobs for this req id
-	// - check all jobs; if spme jobs are not read; wait them and check status to BLOCKED
-
-	// - if all jobs are OK, check all created host by reqid
-	// - compare hostname from rsview and from found job
-	// - if comparison failed - error
-
-	// - if hostname comparison is OK, check existed MAC for host.
-	// - if MAC is not NULL and is not equal to our, check existed MAC in rsview
-	// - if old MAC was found in rsview, then NONE - (to hard, fuck this)
-
-	// - if all comparisons are OK;
-
-	// - do we need a table with hard-coded relationships?
-
-	//	}
-	// if parseResult,ec := globRsview.parsePortAttributes
+	if _,e := globSqlDB.Exec("UPDATE macs SET host = ? WHERE mac = ?", hId, m.mac.String()); e != nil {
+		return newAppError(errInternalSqlError).log(e, "Could not save the mac into DB!")
+	}
 
 	return nil
 }
