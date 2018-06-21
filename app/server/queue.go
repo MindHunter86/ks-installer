@@ -116,7 +116,7 @@ func getJobById(jobId string) (*queueJob, *appError) {
 
 func getTinyJobByReqId(reqId string, jobAct uint8) (*queueJob, *appError) {
 
-	rws,e := globSqlDB.Query("SELECT id,state FROM jobs WHERE requested_by = ? action = ? LIMIT 2", reqId, jobAct)
+	rws,e := globSqlDB.Query("SELECT id,state FROM jobs WHERE requested_by = ? AND action = ? LIMIT 2", reqId, jobAct)
 	if e != nil {
 		return nil,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
@@ -335,19 +335,18 @@ func (m *queueWorker) doJob(jb *queueJob) {
 			return
 		}
 
-		jb.stateUpdate(jobStatusBlocked)
+		if reqHostJob.state == jobStatusPending {
+			jb.stateUpdate(jobStatusBlocked)
 
-		var host *baseHost
-		for ; host == nil; {
-			host,e = getTinyHostByJobId(reqHostJob.id)
-
-			if e != nil {
-				jb.appendAppError(e)
-				return
-			}
+			// TODO: sleep while job is Pending
+			// and set Pending state! XXX
 		}
 
-		jb.stateUpdate(jobStatusPending)
+		host,e = getTinyHostByJobId(reqHostJob.id)
+		if e != nil {
+			jb.appendAppError(e)
+			return
+		}
 
 		if ! port.compareLLDPWithHost(host.hostname) {
 			err := newAppError(errRsviewLLDPMismatch)

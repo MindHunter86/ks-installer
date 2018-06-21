@@ -8,7 +8,7 @@ import "crypto/tls"
 import "net"
 import "net/url"
 import "net/http"
-import "net/http/httputil"
+// import "net/http/httputil"
 
 import "bufio"
 import "strings"
@@ -173,11 +173,11 @@ func (m *rsviewClient) getPortAttributes(mac net.HardwareAddr) ([]string, *appEr
 
 	rq.Header.Set("Authorization", m.httpAuthHeader)
 
-	dump, e := httputil.DumpRequest(rq, true)
-	if e != nil {
-		return nil,newAppError(errInternalCommonError).log(e, "Request dump error!")
-	}
-	globLogger.Debug().Bytes("request", dump).Msg("")
+//	dump, e := httputil.DumpRequest(rq, true)
+//	if e != nil {
+//		return nil,newAppError(errInternalCommonError).log(e, "Request dump error!")
+//	}
+//	globLogger.Debug().Bytes("request", dump).Msg("")
 
 	rsp, e := m.httpClient.Do(rq)
 	if e != nil {
@@ -266,7 +266,7 @@ LOOP:
 	}
 
 	if len(buf) == 0 {
-		return buf,newAppError(errRsviewParseError).log(nil, "Buffer is empty after parsing!")
+		return buf,newAppError(errRsviewMacNotFound).log(nil, "Buffer is empty after parsing (seems mac was not found)!")
 	}
 
 	if len(buf) != len(rsviewTableHuman) {

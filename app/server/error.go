@@ -33,6 +33,7 @@ const (
 	errRsviewUnknownJun
 	errRsviewUnknownLLDP
 	errRsviewLLDPMismatch
+	errRsviewMacNotFound
 
 	// telegram errors:
 	errTgUnknownCommand = uint8(iota)
@@ -67,6 +68,7 @@ var (
 		errRsviewUnknownJun: "Rsview result parse mismatch",
 		errRsviewUnknownLLDP: "Rsview result parse mismatch",
 		errRsviewLLDPMismatch: "Rsview comparison failure",
+		errRsviewMacNotFound: "Rsview parse generic error",
 	}
 	apiErrorsDetail = map[uint8]string{
 		errNotError:               "",
@@ -92,6 +94,7 @@ var (
 		errRsviewUnknownJun: "The job failed because of rsview parse failure! Parsed Jun does not match the configuration!",
 		errRsviewUnknownLLDP: "The job failed because of rsview parse failure! Parsed LLDP host does not valid!",
 		errRsviewLLDPMismatch: "The job failed because of a failure to compare the lldp and ipmi hostname!",
+		errRsviewMacNotFound: "The requested MAC address was not found in the database!",
 	}
 	apiErrorsStatus = map[uint8]int{ // TODO: try to use 4XX instead of 5XX
 		errNotError:               http.StatusOK,
@@ -117,6 +120,7 @@ var (
 		errRsviewUnknownJun: http.StatusInternalServerError,
 		errRsviewUnknownLLDP: http.StatusInternalServerError,
 		errRsviewLLDPMismatch: http.StatusInternalServerError,
+		errRsviewMacNotFound: http.StatusNotFound,
 	}
 
 	// telegram errors:

@@ -27,11 +27,34 @@ func newPortWithMAC(mac *string) (*basePort, *appError) {
 		return nil,err.log(e, "Could not parse the given MAC address!", err.glCtx().Str("mac", *mac))
 	}
 
-	if _,e = globSqlDB.Exec("INSERT INTO macs (mac) VALUES (?)", port.mac.String()); e != nil {
-		return nil,newAppError(errInternalSqlError).log(e, "Could not save the mac into DB")
+	return port,port.getOrCreate()
+}
+
+func (m *basePort) getOrCreate() *appError {
+
+	rws,e := globSqlDB.Query("SELECT 1 FROM macs WHERE mac = ? LIMIT 2", m.mac.String())
+	if e != nil {
+		return newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+	}
+	defer rws.Close()
+
+	if ! rws.Next() {
+		if rws.Err() != nil {
+			return newAppError(errInternalSqlError).log(e, "Could not exec rows.Next method!")
+		}
+
+		if _,e = globSqlDB.Exec("INSERT INTO macs (mac) VALUES (?)", m.mac.String()); e != nil {
+			return newAppError(errInternalSqlError).log(e, "Could not save the mac into DB")
+		}
+
+		return nil
 	}
 
-	return port,nil
+	if rws.Next() {
+		return newAppError(errInternalSqlError).log(nil, "Rows is not equal to 1. The DB has broken!")
+	}
+
+	return nil
 }
 
 func (m *basePort) parseRsviewProperties() *appError {
@@ -61,13 +84,13 @@ func (m *basePort) parseRsviewProperties() *appError {
 	}
 
 	// parse rsview zonename:
-	if rsResult[rsviewTableZoneName] != globConfig.Base.Rsview.Access.Zone {
-		return newAppError(errRsviewUnknownZone).log(nil, "Given Zonename doesn't have configuration matches!")
-	}
+//	if rsResult[rsviewTableZoneName] != globConfig.Base.Rsview.Access.Zone {
+//		return newAppError(errRsviewUnknownZone).log(nil, "Given Zonename doesn't have configuration matches!")
+//	}
 
 	// parse port name:
 	for _,v := range globConfig.Base.Rsview.Access.Port_Names {
-		if strings.Compare(rsResult[rsviewTablePort], v) == 0 {
+		if strings.Contains(rsResult[rsviewTablePort], v) {
 			if m.jun_port_name == "" {
 				m.jun_port_name = rsResult[rsviewTablePort]
 				continue
@@ -83,7 +106,7 @@ func (m *basePort) parseRsviewProperties() *appError {
 
 	// parse jun name:
 	for _,v := range globConfig.Base.Rsview.Access.Jun_Names {
-		if strings.Compare(rsResult[rsviewTableHostname], v) == 0 {
+		if strings.Contains(rsResult[rsviewTableHostname], v) {
 			if m.jun_name == "" {
 				m.jun_name = rsResult[rsviewTableHostname]
 				continue

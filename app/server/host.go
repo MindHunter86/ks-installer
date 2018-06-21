@@ -120,7 +120,6 @@ func (m *baseHost) findProperties() (bool, *appError) {
 	defer rws.Close()
 
 	if ! rws.Next() {
-		globLogger.Warn().Msg("i'm here")
 		if rws.Err() != nil {
 			return false,newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
