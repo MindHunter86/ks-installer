@@ -33,8 +33,8 @@ type (
 		Attributes *dataAttributes `json:"attributes,omitempty"`
 	}
 	dataAttributes struct {
+		Host *attributesHost `json:"host,omitempty"`
 		Jobs  []*attributesJob  `json:"jobs,omitempty"`
-		Hosts []*attributesHost `json:"hosts,omitempty"`
 	}
 	attributesHost struct {
 		Host       *hostsHost   `json:"host,omitempty"`
@@ -362,6 +362,11 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		Type: "job",
 		Id:   req.id,
 		Attributes: &dataAttributes{
+			Host: &attributesHost{
+				Host: &hostsHost{ // XXX WTF?! Rename it!
+					Id: host.id,
+				},
+			},
 			Jobs: jbResps,
 		},
 	}, http.StatusCreated)

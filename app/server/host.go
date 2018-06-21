@@ -70,6 +70,37 @@ func (m *baseHost) parseIpmiAddress(ipmiIp *string) *appError {
 	}
 
 	m.ipmi_address = &ipmiAddr
+	return m.getOrCreate()
+}
+
+func (m *baseHost) getOrCreate() *appError {
+
+	rws,e := globSqlDB.Query("SELECT id, hostname FROM hosts where ipmi_address = ? LIMIT 2", m.ipmi_address.String())
+	if e != nil {
+		return newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+	}
+	defer rws.Close()
+
+	if !rws.Next() {
+		if rws.Err() != nil {
+			return newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
+		}
+
+		if _,e = globSqlDB.Exec("INSERT INTO hosts (id, ipmi_address) VALUES (?, ?)", m.id, m.ipmi_address.String()); e != nil {
+			return newAppError(errInternalSqlError).log(e, "Could not exec the database query!")
+		}
+
+		return nil
+	}
+
+	if e := rws.Scan(&m.id, &m.hostname); e != nil {
+		return newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+	}
+
+	if rws.Next() {
+		return newAppError(errInternalCommonError).log(nil, "Rows is not equal to 1. The DB has broken!")
+	}
+
 	return nil
 }
 
@@ -109,9 +140,11 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 		return m.updateProperties()
 	}
 
+// TODO: refactor it. INSERT now in parseIpmi() method!
 	return m.createProperties()
 }
 
+// TODO: refactor it. INSERT now in parseIpmi() method!
 func (m *baseHost) findProperties() (bool, *appError) {
 
 	rws, e := globSqlDB.Query("SELECT id,ipmi_address,updated_at FROM hosts WHERE hostname = ? LIMIT 2", m.hostname)
