@@ -242,8 +242,8 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 		Action: jb.getHumanAction(),
 		State: jb.getHumanStateDetails(),
 		Errors: jbErrs,
-		Updated_At: jb.updated_at.String(),
-		Created_At: jb.created_at.String(),
+		Updated_At: jb.updated_at.Format(time.RFC3339),
+		Created_At: jb.created_at.Format(time.RFC3339),
 	})
 
 	m.respondJSON(w, req, &responseData{
@@ -372,7 +372,7 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 		jbResps = append(jbResps, &attributesJobs{
 			Id: v.id,
 			Action: v.getHumanAction(),
-			Created_At: v.created_at.String(),
+			Created_At: v.created_at.Format(time.RFC3339),
 		})
 
 		v.addToQueue()
