@@ -27,12 +27,35 @@ type (
 		Links   *responseLinks   `json:"links,omitempty"`
 		Debug   *responseDebug   `json:"debug,omitempty"`
 	}
+
 	responseData struct {
-		Type           string              `json:"type,omitempty"`
-		Id             string              `json:"id,omitempty"`
-		JobAttributes  *dataJobAttributes  `json:"attributes,omitempty"`  // BUG: json attributes duplicate!
-		HostAttributes *dataHostAttributes `json:"attributes1,omitempty"` // TODO: refactor needed!
+		Type string `json:"type,omitempty"`
+		Id string `json:"id,omitempty"`
+		Attributes *dataAttributes `json:"attributes,omitempty"`
 	}
+	dataAttributes struct {
+		Jobs []*attributesJobs `json:":jobs,omitempty"`
+		Hosts []*attributesHosts `json:"hosts,omitempty"`
+	}
+	attributesHosts struct {} // TODO
+	attributesJobs struct {
+		Id string `json:"id,omitempty"`
+		Action string `json:"action,omitempty"`
+		State string `json:"state,omitempty"`
+		Errors []*jobsErrors `json:"errors,omitempty"`
+		Updated_At string `json:"updated_at,omitempty"`
+		Created_At string `json:"created_at,omitempty"`
+	}
+	jobsErrors struct {
+		Id string `json:"id,omitempty"`
+		Code uint8 `json:"code,omitempty"`
+		Title string `json:"title,omitempty"`
+		Details string `json:"details,omitempty"`
+	}
+
+
+
+
 	dataHostAttributes struct {
 		Hostid string                 `json:"hostid,omitempty"`
 		Ipmi   *hostAttributesIpmi    `json:"ipmi,omitempty"`
@@ -57,9 +80,6 @@ type (
 		Payload    *jobsPayload `json:"payload,omitempty"`
 		Updated_At string       `json:"updated_at,omitempty"`
 		Created_At string       `json:"created_at,omitempty"`
-	}
-	dataJobAttributes struct {
-		Jobs []*jobAttributesJob `json:"jobs,omitempty"`
 	}
 	jobAttributesJob struct {
 		Id         string       `json:"id,omitempty"`
@@ -204,8 +224,8 @@ func (m *apiController) httpHandlerRootV1(w http.ResponseWriter, r *http.Request
 func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request) {
 
 	var req = context.Get(r, "internal_request").(*httpRequest)
-	var vars = mux.Vars(r)
 
+	var vars = mux.Vars(r)
 	if vars["id"] == "" {
 		req.appendAppError(newAppError(errApiUnknownApiFormat))
 		m.respondJSON(w, req, nil, 0)
@@ -219,23 +239,29 @@ func (m *apiController) httpHandlerJobGet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var jbs = make([]*jobAttributesJob, 1)
-	jbs = append(jbs, &jobAttributesJob{
+	jbErrs,err := jb.getResponseErrors()
+	if err != nil {
+		req.appendAppError(err)
+		m.respondJSON(w, req, nil, 0)
+		return
+	}
+
+	jbs := append([]*attributesJobs{}, &attributesJobs{
 		Id: jb.id,
-		Payload: &jobsPayload{
-			Action: jobActHumanDetail[jb.action],
-			State:  jobStatusHumanDetail[jb.state],
-		},
+		Action: jb.getHumanAction(),
+		State: jb.getHumanStateDetails(),
+		Errors: jbErrs,
 		Updated_At: jb.updated_at.String(),
 		Created_At: jb.created_at.String(),
 	})
 
 	m.respondJSON(w, req, &responseData{
 		Type: "job",
-		Id:   req.id,
-		JobAttributes: &dataJobAttributes{
+		Id: req.id,
+		Attributes: &dataAttributes{
 			Jobs: jbs,
-		}}, http.StatusOK)
+		},
+	}, http.StatusOK)
 }
 
 func (m *apiController) httpHandlerHostGet(w http.ResponseWriter, r *http.Request) {
@@ -369,9 +395,9 @@ func (m *apiController) httpHandlerHostCreate(w http.ResponseWriter, r *http.Req
 	m.respondJSON(w, req, &responseData{
 		Type: "job",
 		Id:   req.id,
-		JobAttributes: &dataJobAttributes{
-			Jobs: jobResponses,
-		},
+		//JobAttributes: &dataJobAttributes{
+			//Jobs: jobResponses,
+		//},
 	}, http.StatusCreated)
 }
 

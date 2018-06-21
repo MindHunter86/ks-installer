@@ -145,6 +145,34 @@ func getTinyJobByReqId(reqId string, jobAct uint8) (*queueJob, *appError) {
 	return jb, nil
 }
 
+func (m *queueJob) getResponseErrors() ([]*jobsErrors,*appError) {
+
+	var jbErrs []*jobsErrors
+
+	rws,e := globSqlDB.Query("SELECT id,internal_code,title,details FROM errors WHERE job_id = ?")
+	if e != nil {
+		return jbErrs,newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
+	}
+	defer rws.Close()
+
+	for rws.Next() {
+
+		var jbErr = &jobsErrors{}
+
+		if e := rws.Scan(&jbErr.Id, &jbErr.Code, &jbErr.Title, &jbErr.Details); e != nil {
+			return jbErrs,newAppError(errInternalSqlError).log(e, "Could not scan the result from DB!")
+		}
+
+		jbErrs = append(jbErrs, jbErr)
+	}
+
+	if rws.Err() != nil {
+		return jbErrs,newAppError(errInternalSqlError).log(e, "Could not exec rows.Next method!")
+	}
+
+	return jbErrs,nil
+}
+
 func (m *queueJob) appendAppError(aErr *appError) *appError {
 
 	m.errors = append(m.errors, aErr.setJobId(m.id))
@@ -201,6 +229,14 @@ func (m *queueJob) setPayload(pl *map[string]interface{}) {
 
 func (m *queueJob) addToQueue() {
 	globQueueChan <- m
+}
+
+func (m *queueJob) getHumanAction() string {
+	return jobActHumanDetail[m.action]
+}
+
+func (m *queueJob) getHumanStateDetails() string {
+	return jobStatusHumanDetail[m.state]
 }
 
 func newQueueDispatcher() *queueDispatcher {
