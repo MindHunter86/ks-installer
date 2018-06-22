@@ -126,10 +126,16 @@ func NewApiController() *mux.Router {
 
 	s.HandleFunc("/job/{id:(?:[0-9a-f]{8}-)(?:[0-9a-f]{4}-){3}(?:[0-9a-f]{12})}", globApi.httpHandlerJobGet).Methods("GET")
 
+	s.HandleFunc("/test", globApi.httpHandlerTest).Methods("GET")
+
 	// TODO: reload the job if it does not work (failed
 	// /v1/job/UUID?try_again=1
 
 	return r
+}
+
+func (m *apiController) httpHandlerTest(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "fuckyou", http.StatusInternalServerError)
 }
 
 func (m *apiController) httpMiddlewareRequestLog(h http.Handler) http.Handler {
