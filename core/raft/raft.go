@@ -161,6 +161,11 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 			m.logger.Warn().Str("node", node).Str("selected", fqdn[0]).Msg("to resolve the conflict the first hostname will be used")
 		}
 
+		if _,ok := m.nodes[fqdn[0]]; ok {
+			m.logger.Warn().Str("node", node).Str("hostname", fqdn[0]).Msg("node has already added")
+			continue
+		}
+
 		m.nodes[fqdn[0]] = ip.String()
 	}
 
@@ -184,6 +189,7 @@ func (m *RaftService) Bootstrap() error {
 		}
 
 		for id,addr := range m.nodes {
+			m.logger.Debug().Str("node", id).Msg("trying to join a new peer")
 			if e := m.join(id, addr); e != nil {
 				m.logger.Warn().Err(e).Str("node", id).Msg("")
 				if ! m.skipJoinErrs {
@@ -191,12 +197,14 @@ func (m *RaftService) Bootstrap() error {
 				}
 			}
 		}
+
+		m.logger.Debug().Msg("raft bootstrap done")
 	} else {
 		m.logger.Debug().Msg("node is not master, waiting for cluster invitation")
 
 		// is no master wait while raftState == Follower ? (Candidate ?)
 		for {
-			if m.raft.State() != hraft.Follower {
+			if m.raft.State() != hraft.Shutdown {
 				break
 			}
 
@@ -208,6 +216,7 @@ func (m *RaftService) Bootstrap() error {
 
 	if m.logger.Debug().Enabled() {
 		tckr := time.NewTicker(5 * time.Second)
+		tckr.Stop() // XXX 
 
 		for {
 			select {
