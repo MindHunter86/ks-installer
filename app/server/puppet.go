@@ -51,8 +51,9 @@ func (m *puppetClient) parseEndpoints() error {
 //	globLogger.Debug().Interface("config", globConfig.Base.Puppet.Endpoints).Msg("")
 
 
-	for k,v := range globConfig.Base.Puppet.Endpoints {
-
+//	for k,v := range globConfig.Base.Puppet.Endpoints {
+// FIX IT!
+/*
 		if _,ok := globConfig.Base.Puppet.Projects[k]; !ok {
 			return errPuppetConfigUnknownProject
 		}
@@ -72,7 +73,7 @@ func (m *puppetClient) parseEndpoints() error {
 			return errPuppetConfigUnknownVlan
 		}
 	}
-
+*/
 /*
 	for k,_ := range m.projects {
 		if k2,ok := globConfig.Base.Puppet.Endpoints[k]; !ok && k2 != "" {
@@ -89,9 +90,9 @@ func (m *puppetClient) parseEndpoints() error {
 	}
 */
 	// debug:
-	for k,v := range m.projects {
-		globLogger.Debug().Str("project", k).Str("regexp", v.hostRegexp.String()).Str("endpoint", v.apiEndpoint).Msg("")
-	}
+//	for k,v := range m.projects {
+//		globLogger.Debug().Str("project", k).Str("regexp", v.hostRegexp.String()).Str("endpoint", v.apiEndpoint).Msg("")
+//	}
 
 	return nil
 }

@@ -90,7 +90,6 @@ func (m *Core) Bootstrap() error {
 			// TODO: automatic application re-bootstrap
 		}
 	}
-}
 
 	return m.Destruct(&e)
 }
