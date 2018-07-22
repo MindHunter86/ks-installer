@@ -152,7 +152,7 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 
 		if len(fqdn) == 0 {
 			m.logger.Warn().Str("node", node).Msg("unable to resolve node, ipv4 address will be used as node ID")
-			m.nodes[ip.IP.String()] = ip.IP.String()
+			m.nodes[ip.IP.String()] = ip.String()
 			continue
 		}
 
@@ -161,7 +161,7 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 			m.logger.Warn().Str("node", node).Str("selected", fqdn[0]).Msg("to resolve the conflict the first hostname will be used")
 		}
 
-		m.nodes[fqdn[0]] = ip.IP.String()
+		m.nodes[fqdn[0]] = ip.String()
 	}
 
 	return nil
