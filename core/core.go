@@ -72,18 +72,18 @@ func (m *Core) Bootstrap() error {
 	}(epipe, m.appWg)
 
 	// http service bootstrap:
-	go func(e chan error, wg sync.WaitGroup) {
-		wg.Add(1)
-		defer wg.Done()
-		e <- m.http.Bootstrap()
-	}(epipe, m.appWg)
+//	go func(e chan error, wg sync.WaitGroup) {
+//		wg.Add(1)
+//		defer wg.Done()
+//		e <- m.http.Bootstrap()
+//	}(epipe, m.appWg)
 
 	// application bootstrap:
-	go func(e chan error, wg sync.WaitGroup) {
-		wg.Add(1)
-		defer wg.Done()
-		e <- m.app.Bootstrap()
-	}(epipe, m.appWg)
+//	go func(e chan error, wg sync.WaitGroup) {
+//		wg.Add(1)
+//		defer wg.Done()
+//		e <- m.app.Bootstrap()
+//	}(epipe, m.appWg)
 
 	// main application event loop:
 LOOP:
