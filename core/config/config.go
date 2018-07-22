@@ -49,6 +49,21 @@ type CoreConfig struct {
 				Jun_Names  []string
 			}
 		}
+		Raft struct {
+			Is_Master bool
+			Nodes []string
+			Listen string
+			Inmemory_Store bool
+			Max_Pool_Size int
+			Skip_Join_Errors bool
+			Timeouts struct {
+				Tcp, Raft int
+			}
+			Snapshots struct {
+				Path string
+				Retain_Count int
+			}
+		}
 		Puppet struct {
 			Projects map[string]string
 			Endpoints map[string]map[string]string

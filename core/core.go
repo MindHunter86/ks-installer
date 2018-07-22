@@ -72,22 +72,25 @@ func (m *Core) Bootstrap() error {
 	}(epipe, m.appWg)
 
 	// main application event loop:
-	select {
+	for {
+		select {
 
-	// kernel signal catcher:
-	case <-kernSignal:
-		m.log.Warn().Msg("Syscall.SIG* has been detected! Closing application...")
-		break
+		// kernel signal catcher:
+		case <-kernSignal:
+			m.log.Warn().Msg("Syscall.SIG* has been detected! Closing application...")
+			break
 
-	// application error catcher:
-	case e = <-epipe:
-		if e != nil {
-			m.log.Error().Err(e).Msg("Runtime error! Abnormal application closing!")
+		// application error catcher:
+		case e = <-epipe:
+			if e != nil {
+				m.log.Error().Err(e).Msg("Runtime error! Abnormal application closing!")
+			}
+			break
+
+			// TODO: automatic application re-bootstrap
 		}
-		break
-
-		// TODO: automatic application re-bootstrap
 	}
+}
 
 	return m.Destruct(&e)
 }
