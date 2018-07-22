@@ -40,7 +40,7 @@ func (m *Core) Construct() (*Core, error) {
 
 	// internal resources configuration:
 	m.raft = raft.NewService(m.log)
-	if m.raft.Init(m.cfg); e != nil {
+	if e = m.raft.Init(m.cfg); e != nil {
 		return nil, e
 	}
 

@@ -140,20 +140,19 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 
 	for _,node := range c.Base.Raft.Nodes {
 
-		ip := net.ParseIP(node)
-		if ip == nil {
+		ip,e := net.ResolveTCPAddr("tcp4", node); if e != nil {
 			m.logger.Warn().Str("node", node).Msg("node has an invalid ipv4 address, it will be omitted")
 			continue
 		}
 
-		fqdn,e := resolver.LookupAddr(context.Background(), node)
+		fqdn,e := resolver.LookupAddr(context.Background(), ip.IP.String())
 		if e != nil {
 			return e
 		}
 
 		if len(fqdn) == 0 {
 			m.logger.Warn().Str("node", node).Msg("unable to resolve node, ipv4 address will be used as node ID")
-			m.nodes[node] = node
+			m.nodes[ip.IP.String()] = ip.IP.String()
 			continue
 		}
 
@@ -162,7 +161,7 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 			m.logger.Warn().Str("node", node).Str("selected", fqdn[0]).Msg("to resolve the conflict the first hostname will be used")
 		}
 
-		m.nodes[fqdn[0]] = node
+		m.nodes[fqdn[0]] = ip.IP.String()
 	}
 
 	return nil
@@ -175,6 +174,13 @@ func (m *RaftService) Bootstrap() error {
 
 		f := m.raft.BootstrapCluster(*m.config); if f.Error() != nil {
 			return f.Error()
+		}
+
+		for {
+			time.Sleep(1)
+			if m.raft.State() == hraft.Leader {
+				break
+			}
 		}
 
 		for id,addr := range m.nodes {
@@ -232,10 +238,6 @@ func (m *RaftService) DeInit() error {
 	}(m.logger)
 
 	return m.raft.Shutdown().Error()
-}
-
-func (m *RaftService) bootstrap() {
-
 }
 
 func (m *RaftService) join(nodeId, nodeAddr string) error {
