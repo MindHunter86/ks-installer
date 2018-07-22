@@ -26,6 +26,7 @@ type RaftService struct {
 	config *hraft.Configuration
 
 	logger *zerolog.Logger
+	donePipe chan struct{}
 }
 
 type Store struct {
@@ -62,6 +63,7 @@ func NewService(l *zerolog.Logger) (*RaftService) {
 		logger: l,
 		store: newStore(),
 		nodes: make(map[string]string),
+		donePipe: make(chan struct{}, 1),
 	}
 }
 
@@ -166,7 +168,7 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 	return nil
 }
 
-func (m *RaftService) Bootstrap(connTimeout *time.Duration, donePipe chan struct{}) error {
+func (m *RaftService) Bootstrap() error {
 
 	if m.is_master {
 		m.logger.Debug().Msg("node is master, trying to bootstrap the cluster")
@@ -203,7 +205,7 @@ func (m *RaftService) Bootstrap(connTimeout *time.Duration, donePipe chan struct
 
 		for {
 			select {
-				case <-donePipe:
+				case <-m.donePipe:
 					tckr.Stop()
 					return nil
 				case <-tckr.C:
@@ -215,11 +217,13 @@ func (m *RaftService) Bootstrap(connTimeout *time.Duration, donePipe chan struct
 		}
 	}
 
-	<-donePipe
+	<-m.donePipe
 	return nil
 }
 
 func (m *RaftService) DeInit() error {
+
+	close(m.donePipe)
 
 	defer func(l *zerolog.Logger) {
 		if r := recover(); r != nil {

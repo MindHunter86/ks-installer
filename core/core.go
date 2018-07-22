@@ -11,6 +11,7 @@ import (
 	"bitbucket.org/mh00net/ks-installer/core/config"
 	"bitbucket.org/mh00net/ks-installer/core/http"
 	"bitbucket.org/mh00net/ks-installer/core/sql"
+	"bitbucket.org/mh00net/ks-installer/core/raft"
 
 	"github.com/rs/zerolog"
 )
@@ -18,6 +19,7 @@ import (
 type Core struct {
 	sql  sql.SqlDriver
 	http *http.HttpService
+	raft *raft.RaftService
 
 	log *zerolog.Logger
 	cfg *config.CoreConfig
@@ -37,6 +39,11 @@ func (m *Core) Construct() (*Core, error) {
 	}
 
 	// internal resources configuration:
+	m.raft = raft.NewService(m.log)
+	if m.raft.Init(m.cfg); e != nil {
+		return nil, e
+	}
+
 	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
 		return nil, e
 	}
@@ -57,6 +64,13 @@ func (m *Core) Bootstrap() error {
 	var e error
 	var epipe = make(chan error)
 
+	// raft service bootstrap:
+	go func(e chan error, wg sync.WaitGroup) {
+		wg.Add(1)
+		defer wg.Done()
+		e <- m.raft.Bootstrap()
+	}(epipe, m.appWg)
+
 	// http service bootstrap:
 	go func(e chan error, wg sync.WaitGroup) {
 		wg.Add(1)
@@ -72,20 +86,21 @@ func (m *Core) Bootstrap() error {
 	}(epipe, m.appWg)
 
 	// main application event loop:
+LOOP:
 	for {
 		select {
 
 		// kernel signal catcher:
 		case <-kernSignal:
 			m.log.Warn().Msg("Syscall.SIG* has been detected! Closing application...")
-			break
+			break LOOP
 
 		// application error catcher:
 		case e = <-epipe:
 			if e != nil {
 				m.log.Error().Err(e).Msg("Runtime error! Abnormal application closing!")
 			}
-			break
+			break LOOP
 
 			// TODO: automatic application re-bootstrap
 		}
@@ -95,12 +110,23 @@ func (m *Core) Bootstrap() error {
 }
 
 func (m *Core) Destruct(e *error) error {
+	var err error
+
 	// application destruct:
-	m.app.Destruct()
+	if err = m.app.Destruct(); err != nil {
+		m.log.Warn().Err(err).Msg("abnormal app exit")
+	}
 
 	// internal resources destruct:
-	m.http.Destruct()
-	m.sql.Destruct()
+	if err = m.raft.DeInit(); err != nil {
+		m.log.Warn().Err(err).Msg("abnormal raft.DeInit() exit")
+	}
+	if err = m.http.Destruct(); err != nil {
+		m.log.Warn().Err(err).Msg("abnormal http exit")
+	}
+	if err = m.sql.Destruct(); err != nil {
+		m.log.Warn().Err(err).Msg("abnormal sql exit")
+	}
 
 	m.appWg.Wait()
 	return *e
