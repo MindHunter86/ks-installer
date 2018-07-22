@@ -77,14 +77,14 @@ func (m *Core) Bootstrap() error {
 	// kernel signal catcher:
 	case <-kernSignal:
 		m.log.Warn().Msg("Syscall.SIG* has been detected! Closing application...")
-		break LOOP
+		break
 
 	// application error catcher:
 	case e = <-epipe:
 		if e != nil {
 			m.log.Error().Err(e).Msg("Runtime error! Abnormal application closing!")
 		}
-		break LOOP
+		break
 
 		// TODO: automatic application re-bootstrap
 	}

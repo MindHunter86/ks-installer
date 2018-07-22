@@ -49,6 +49,10 @@ type CoreConfig struct {
 				Jun_Names  []string
 			}
 		}
+		Puppet struct {
+			Projects map[string]string
+			Endpoints map[string]map[string]string
+		}
 	}
 }
 

@@ -35,14 +35,14 @@ const (
 	errRsviewLLDPMismatch
 	errRsviewMacNotFound
 	errHostsNotFound
-
-	// telegram errors:
-	errTgUnknownCommand = uint8(iota)
 )
 
 var (
 	// common errors:
 	errApiCommonTypeInvalid = errors.New("The request type and the link are not the same!")
+	errPuppetConfigInvalid = errors.New("Could not get valid project/project_regexps from the configuration file!")
+	errPuppetConfigUnknownProject = errors.New("Could not find defined project in config file! Check base/puppet/projects hash and try again!")
+	errPuppetConfigUnknownVlan = errors.New("Could not find defined vlan in config file! Check base/rsview/access/vlans array and try again!")
 
 	// api errors:
 	apiErrorsTitle = map[uint8]string{
@@ -125,11 +125,6 @@ var (
 		errRsviewLLDPMismatch:     http.StatusInternalServerError,
 		errRsviewMacNotFound:      http.StatusNotFound,
 		errHostsNotFound:          http.StatusNotFound,
-	}
-
-	// telegram errors:
-	tgErrorsDetail = map[uint8]string{
-		errTgUnknownCommand: "The requested command was not found!",
 	}
 )
 

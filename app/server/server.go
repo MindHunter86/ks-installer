@@ -15,6 +15,7 @@ var (
 	globSqlDB     *sql.DB
 	globQueueChan chan *queueJob
 	globRsview    *rsviewClient
+	globPuppet *puppetClient
 )
 
 type App struct {
@@ -30,6 +31,11 @@ func (m *App) Construct() (*App, error) {
 	globRsview, err = newRsviewClient()
 	if err != nil {
 		globLogger.Error().Str("err", apiErrorsDetail[err.code]).Msg("RSVIEW ERROR!")
+	}
+
+	globPuppet = newPuppetClient()
+	if e := globPuppet.parseEndpoints(); e != nil {
+		return nil,e
 	}
 
 	return m, nil
