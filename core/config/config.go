@@ -50,9 +50,7 @@ type CoreConfig struct {
 			}
 		}
 		Raft struct {
-			Is_Master bool
-			Nodes []string
-			Listen string
+			Cluster_Nodes map[string]string
 			Inmemory_Store bool
 			Max_Pool_Size int
 			Skip_Join_Errors bool

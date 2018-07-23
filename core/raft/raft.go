@@ -1,6 +1,5 @@
 package raft
 
-import "context"
 import "errors"
 import "io"
 import "os"
@@ -20,10 +19,16 @@ type RaftService struct {
 	raft *hraft.Raft
 	store *Store
 
-	is_master bool
+	localId string
+	nodes map[string]*net.TCPAddr
 	skipJoinErrs bool
-	nodes map[string]string
-	config *hraft.Configuration
+
+	config *hraft.Config
+	configuration *hraft.Configuration
+	logStore hraft.LogStore
+	stableStore hraft.StableStore
+	snapStore hraft.SnapshotStore
+	transport hraft.Transport
 
 	logger *zerolog.Logger
 	donePipe chan struct{}
@@ -62,153 +67,95 @@ func NewService(l *zerolog.Logger) (*RaftService) {
 	return &RaftService{
 		logger: l,
 		store: newStore(),
-		nodes: make(map[string]string),
+		nodes: make(map[string]*net.TCPAddr),
 		donePipe: make(chan struct{}, 1),
 	}
 }
 
 func (m *RaftService) Init(c *config.CoreConfig) error {
 	var e error
+	var clusterServers []hraft.Server
 
-	addr,e := net.ResolveTCPAddr("tcp", c.Base.Raft.Listen); if e != nil {
-		return e
+	for id,ip := range c.Base.Raft.Cluster_Nodes {
+		addr,e := net.ResolveTCPAddr("tcp", ip); if e != nil {
+			m.logger.Error().Err(e).Msg("unable to build node list")
+		}
+
+		m.nodes[id] = addr
+		if m.localId == "" {
+			m.localId = id
+		}
+
+		clusterServers = append(clusterServers, hraft.Server{
+			ID: hraft.ServerID(id),
+			Address: hraft.ServerAddress(addr.String()),
+		})
 	}
 
-	tcpTrans,e := hraft.NewTCPTransport(
-		c.Base.Raft.Listen,
-		addr,
+	m.transport,e = hraft.NewTCPTransport(
+		m.nodes[m.localId].String(),
+		m.nodes[m.localId],
 		c.Base.Raft.Max_Pool_Size,
 		time.Duration(c.Base.Raft.Timeouts.Tcp) * time.Millisecond,
-		os.Stderr )
-	if e != nil { return e }
+		os.Stderr,
+	); if e != nil { return e }
 
-	snapStore,e := hraft.NewFileSnapshotStore(
+	m.snapStore,e = hraft.NewFileSnapshotStore(
 		filepath.Dir(c.Base.Raft.Snapshots.Path),
 		c.Base.Raft.Snapshots.Retain_Count,
-		os.Stderr )
-	if e != nil { return e }
+		os.Stderr,
+	); if e != nil { return e }
 
-	var logStore hraft.LogStore
-	var stableStore hraft.StableStore
-
-	if c.Base.Raft.Inmemory_Store {
-		logStore = hraft.NewInmemStore()
-		stableStore = hraft.NewInmemStore()
-	} else {
-		boltDb,e := hraftboltdb.NewBoltStore(c.Base.Raft.Snapshots.Path)
+	switch c.Base.Raft.Inmemory_Store {
+	case true:
+		m.logStore = hraft.NewInmemStore()
+		m.stableStore = hraft.NewInmemStore()
+	default:
+		boltStore,e := hraftboltdb.NewBoltStore(c.Base.Raft.Snapshots.Path)
 		if e != nil { return e }
 
-		logStore = boltDb
-		stableStore = boltDb
+		m.stableStore = boltStore
+		m.logStore = boltStore
 	}
 
-	var raftConfig = hraft.DefaultConfig()
-	if hostname,e := os.Hostname(); e != nil {
-		raftConfig.LocalID = hraft.ServerID(addr.IP.String())
-		m.logger.Warn().Err(e).Msg("unable to get local hostname, ipv4 address will be used as node ID")
-	} else {
-		raftConfig.LocalID = hraft.ServerID(hostname)
+	m.config = hraft.DefaultConfig()
+	m.config.LocalID = hraft.ServerID(m.localId)
+	m.configuration = &hraft.Configuration{
+		Servers: clusterServers,
 	}
 
-	if m.raft,e = hraft.NewRaft(raftConfig, (*raftFSM)(m.store), logStore, stableStore, snapStore, tcpTrans); e != nil {
-		return e
-	}
-
-	m.is_master = c.Base.Raft.Is_Master
-
-	// if node is not master, complete the init():
-	if ! m.is_master { return nil }
-
-	// else continue the initialization:
 	m.skipJoinErrs = c.Base.Raft.Skip_Join_Errors
-
-	m.config = &hraft.Configuration{
-		Servers: []hraft.Server{
-			{
-				ID: raftConfig.LocalID,
-				Address: tcpTrans.LocalAddr(),
-			},
-		},
-	}
-
-	var resolver = new(net.Resolver)
-	if c.Base.Dns_Resolver != "" {
-		resolver.Dial = func(ctx context.Context, network, server string) (net.Conn, error) {
-			return new(net.Dialer).DialContext(ctx, network, c.Base.Dns_Resolver)
-		}
-	}
-
-	for _,node := range c.Base.Raft.Nodes {
-
-		ip,e := net.ResolveTCPAddr("tcp4", node); if e != nil {
-			m.logger.Warn().Str("node", node).Msg("node has an invalid ipv4 address, it will be omitted")
-			continue
-		}
-
-		fqdn,e := resolver.LookupAddr(context.Background(), ip.IP.String())
-		if e != nil || len(fqdn) == 0 {
-			m.logger.Warn().Err(e).Str("node", node).Msg("unable to resolve node, ipv4 address will be used as node ID")
-			m.nodes[ip.IP.String()] = ip.String()
-			continue
-		}
-
-		if len(fqdn) > 1 {
-			m.logger.Warn().Str("node", node).Strs("hostnames", fqdn).Msg("resolved node has 2 or more hostnames")
-			m.logger.Warn().Str("node", node).Str("selected", fqdn[0]).Msg("to resolve the conflict the first hostname will be used")
-		}
-
-		if _,ok := m.nodes[fqdn[0]]; ok {
-			m.logger.Warn().Str("node", node).Str("hostname", fqdn[0]).Msg("node has already added")
-			continue
-		}
-
-		m.nodes[fqdn[0]] = ip.String()
-	}
-
 	return nil
 }
 
-func (m *RaftService) Bootstrap() error {
+func (m *RaftService) Bootstrap(forceBootstrap bool) error {
 
-	if m.is_master {
-		m.logger.Debug().Msg("node is master, trying to bootstrap the cluster")
+	var e error
+	if m.raft,e = hraft.NewRaft(m.config, (*raftFSM)(m.store), m.logStore, m.stableStore, m.snapStore, m.transport); e != nil {
+		return e
+	}
 
-		f := m.raft.BootstrapCluster(*m.config); if f.Error() != nil {
-			m.logger.Error().Err(e).Msg("unable to bootstrap a new cluster, trying to recover it")
+	if ft := m.raft.BootstrapCluster(*m.configuration); ft.Error() != nil {
+		if ft.Error() != hraft.ErrCantBootstrap {
+			m.logger.Error().Err(ft.Error()).Msg("unable to bootstrap the cluster")
+			return ft.Error()
 		}
 
-		for {
-			time.Sleep(1)
-			if m.raft.State() == hraft.Leader {
-				break
-			}
-		}
-
-		for id,addr := range m.nodes {
-			m.logger.Debug().Str("node", id).Msg("trying to join a new peer")
-			if e := m.join(id, addr); e != nil {
-				m.logger.Warn().Err(e).Str("node", id).Msg("")
-				if ! m.skipJoinErrs {
-					return errors.New("unable to bootstrap the cluster while one of the nodes is fails")
+		if forceBootstrap {
+			m.logger.Warn().Msg("unable to bootstrap the new cluster because of its existence, trying to reconnect to nodes")
+			for id,addr := range m.nodes {
+				m.logger.Debug().Str("node", id).Msg("trying to join a new peer")
+				if e := m.join(id, addr.String()); e != nil {
+					m.logger.Warn().Err(e).Str("node", id).Msg("")
+					if ! m.skipJoinErrs {
+						return errors.New("unable to bootstrap the cluster while one of the nodes is fails")
+					}
 				}
 			}
 		}
-
-		m.logger.Debug().Msg("raft bootstrap done")
-	} else {
-		m.logger.Debug().Msg("node is not master, waiting for cluster invitation")
-
-		// is no master wait while raftState == Follower ? (Candidate ?)
-		for {
-			if m.raft.State() != hraft.Shutdown {
-				break
-			}
-
-			m.logger.Debug().Msg("no cluster invitation received, sleep")
-			time.Sleep(5 * time.Second)
-		}
-
 	}
+
+	m.logger.Debug().Msg("raft bootstrap done")
 
 	if m.logger.Debug().Enabled() {
 		tckr := time.NewTicker(5 * time.Second)

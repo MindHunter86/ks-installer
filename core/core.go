@@ -54,7 +54,7 @@ func (m *Core) Construct() (*Core, error) {
 	return m, nil
 }
 
-func (m *Core) Bootstrap() error {
+func (m *Core) Bootstrap(tmpFlag bool) error {
 
 	// define kernel signal catcher:
 	var kernSignal = make(chan os.Signal)
@@ -65,11 +65,11 @@ func (m *Core) Bootstrap() error {
 	var epipe = make(chan error)
 
 	// raft service bootstrap:
-	go func(e chan error, wg sync.WaitGroup) {
+	go func(e chan error, wg sync.WaitGroup, t bool) {
 		wg.Add(1)
 		defer wg.Done()
-		e <- m.raft.Bootstrap()
-	}(epipe, m.appWg)
+		e <- m.raft.Bootstrap(t)
+	}(epipe, m.appWg, tmpFlag)
 
 	// http service bootstrap:
 //	go func(e chan error, wg sync.WaitGroup) {

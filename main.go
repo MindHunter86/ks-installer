@@ -48,6 +48,10 @@ func main() {
 							Value:  "./extras/config.yml",
 							EnvVar: "SERVER_CONFIG",
 						},
+						cli.BoolFlag{
+							Name: "master, m",
+							Usage: "Force RAFT cluster bootstrap. Use it carefully!",
+						},
 					},
 					Action: func(c *cli.Context) error {
 
@@ -85,7 +89,7 @@ func main() {
 						}
 
 						// core bootstrap:
-						return appCore.Bootstrap()
+						return appCore.Bootstrap(c.Bool("master"))
 					},
 				},
 			},
