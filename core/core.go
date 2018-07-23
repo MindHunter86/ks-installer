@@ -44,12 +44,12 @@ func (m *Core) Construct() (*Core, error) {
 		return nil, e
 	}
 
-	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
-		return nil, e
-	}
-	m.app.SetSqlDb(m.sql.GetRawDBSession())
+//	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
+//		return nil, e
+//	}
+//	m.app.SetSqlDb(m.sql.GetRawDBSession())
 
-	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
+//	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
 
 	return m, nil
 }
@@ -121,12 +121,12 @@ func (m *Core) Destruct(e *error) error {
 	if err = m.raft.DeInit(); err != nil {
 		m.log.Warn().Err(err).Msg("abnormal raft.DeInit() exit")
 	}
-	if err = m.http.Destruct(); err != nil {
-		m.log.Warn().Err(err).Msg("abnormal http exit")
-	}
-	if err = m.sql.Destruct(); err != nil {
-		m.log.Warn().Err(err).Msg("abnormal sql exit")
-	}
+//	if err = m.http.Destruct(); err != nil {
+//		m.log.Warn().Err(err).Msg("abnormal http exit")
+//	}
+//	if err = m.sql.Destruct(); err != nil {
+//		m.log.Warn().Err(err).Msg("abnormal sql exit")
+//	}
 
 	m.appWg.Wait()
 	return *e

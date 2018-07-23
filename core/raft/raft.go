@@ -146,12 +146,8 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 		}
 
 		fqdn,e := resolver.LookupAddr(context.Background(), ip.IP.String())
-		if e != nil {
-			return e
-		}
-
-		if len(fqdn) == 0 {
-			m.logger.Warn().Str("node", node).Msg("unable to resolve node, ipv4 address will be used as node ID")
+		if e != nil || len(fqdn) == 0 {
+			m.logger.Warn().Err(e).Str("node", node).Msg("unable to resolve node, ipv4 address will be used as node ID")
 			m.nodes[ip.IP.String()] = ip.String()
 			continue
 		}
@@ -178,7 +174,7 @@ func (m *RaftService) Bootstrap() error {
 		m.logger.Debug().Msg("node is master, trying to bootstrap the cluster")
 
 		f := m.raft.BootstrapCluster(*m.config); if f.Error() != nil {
-			return f.Error()
+			m.logger.Error().Err(e).Msg("unable to bootstrap a new cluster, trying to recover it")
 		}
 
 		for {
