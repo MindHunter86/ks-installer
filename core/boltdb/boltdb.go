@@ -16,7 +16,7 @@ type BoltDB struct {
 func NewBoltDB(cnf *config.CoreConfig, l *zerolog.Logger) (*BoltDB, error) {
 	var (
 		e error
-		m *BoltDB
+		m *BoltDB = new(BoltDB)
 	)
 
 	m.log = l
