@@ -9,6 +9,7 @@ import "bitbucket.org/mh00net/ks-installer/core"
 import "bitbucket.org/mh00net/ks-installer/core/config"
 import "github.com/rs/zerolog"
 import "gopkg.in/urfave/cli.v1"
+import "gopkg.in/urfave/cli.v1/altsrc"
 
 var log zerolog.Logger
 
