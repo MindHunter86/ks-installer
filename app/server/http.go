@@ -33,8 +33,8 @@ type (
 		Attributes *dataAttributes `json:"attributes,omitempty"`
 	}
 	dataAttributes struct {
-		Host *attributesHost `json:"host,omitempty"`
-		Jobs  []*attributesJob  `json:"jobs,omitempty"`
+		Host *attributesHost  `json:"host,omitempty"`
+		Jobs []*attributesJob `json:"jobs,omitempty"`
 	}
 	attributesHost struct {
 		Host       *hostsHost   `json:"host,omitempty"`

@@ -23,11 +23,10 @@ type System struct {
 	logger *zerolog.Logger
 }
 
-func New() *System {}
-func (m *System) Init() error { return nil }
+func New() *System                 {}
+func (m *System) Init() error      { return nil }
 func (m *System) Bootstrap() error { return nil }
-func (m *System) DeInit() {}
-
+func (m *System) DeInit()          {}
 
 type Core struct {
 	sql  sql.SqlDriver
@@ -57,12 +56,12 @@ func (m *Core) Construct() (*Core, error) {
 		return nil, e
 	}
 
-//	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
-//		return nil, e
-//	}
-//	m.app.SetSqlDb(m.sql.GetRawDBSession())
+	//	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
+	//		return nil, e
+	//	}
+	//	m.app.SetSqlDb(m.sql.GetRawDBSession())
 
-//	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
+	//	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
 
 	return m, nil
 }
@@ -85,18 +84,18 @@ func (m *Core) Bootstrap(tmpFlag bool) error {
 	}(epipe, m.appWg, tmpFlag)
 
 	// http service bootstrap:
-//	go func(e chan error, wg sync.WaitGroup) {
-//		wg.Add(1)
-//		defer wg.Done()
-//		e <- m.http.Bootstrap()
-//	}(epipe, m.appWg)
+	//	go func(e chan error, wg sync.WaitGroup) {
+	//		wg.Add(1)
+	//		defer wg.Done()
+	//		e <- m.http.Bootstrap()
+	//	}(epipe, m.appWg)
 
 	// application bootstrap:
-//	go func(e chan error, wg sync.WaitGroup) {
-//		wg.Add(1)
-//		defer wg.Done()
-//		e <- m.app.Bootstrap()
-//	}(epipe, m.appWg)
+	//	go func(e chan error, wg sync.WaitGroup) {
+	//		wg.Add(1)
+	//		defer wg.Done()
+	//		e <- m.app.Bootstrap()
+	//	}(epipe, m.appWg)
 
 	// main application event loop:
 LOOP:
@@ -134,12 +133,12 @@ func (m *Core) Destruct(e *error) error {
 	if err = m.raft.DeInit(); err != nil {
 		m.log.Warn().Err(err).Msg("abnormal raft.DeInit() exit")
 	}
-//	if err = m.http.Destruct(); err != nil {
-//		m.log.Warn().Err(err).Msg("abnormal http exit")
-//	}
-//	if err = m.sql.Destruct(); err != nil {
-//		m.log.Warn().Err(err).Msg("abnormal sql exit")
-//	}
+	//	if err = m.http.Destruct(); err != nil {
+	//		m.log.Warn().Err(err).Msg("abnormal http exit")
+	//	}
+	//	if err = m.sql.Destruct(); err != nil {
+	//		m.log.Warn().Err(err).Msg("abnormal sql exit")
+	//	}
 
 	m.appWg.Wait()
 	return *e

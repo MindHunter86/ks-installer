@@ -50,26 +50,26 @@ type CoreConfig struct {
 			}
 		}
 		Raft struct {
-			Cluster_Nodes map[string]string
-			Inmemory_Store bool
-			Max_Pool_Size int
+			Cluster_Nodes    map[string]string
+			Inmemory_Store   bool
+			Max_Pool_Size    int
 			Skip_Join_Errors bool
-			Timeouts struct {
+			Timeouts         struct {
 				Tcp, Raft int
 			}
 			Snapshots struct {
-				Path string
+				Path         string
 				Retain_Count int
 			}
 		}
 		Puppet struct {
-			Projects map[string]string
+			Projects  map[string]string
 			Endpoints map[string]map[string]string
 		}
 		Store struct {
-			Path string
-			Mode uint32
-			Lock_Timeout int
+			Path               string
+			Mode               uint32
+			Lock_Timeout       int
 			Read_Only, No_Sync bool
 		}
 	}

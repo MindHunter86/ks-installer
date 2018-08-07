@@ -50,7 +50,7 @@ func main() {
 							EnvVar: "SERVER_CONFIG",
 						},
 						cli.BoolFlag{
-							Name: "master, m",
+							Name:  "master, m",
 							Usage: "Force RAFT cluster bootstrap. Use it carefully!",
 						},
 					},

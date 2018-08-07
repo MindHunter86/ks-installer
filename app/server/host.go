@@ -75,7 +75,7 @@ func (m *baseHost) parseIpmiAddress(ipmiIp *string) *appError {
 
 func (m *baseHost) getOrCreate() *appError {
 
-	rws,e := globSqlDB.Query("SELECT id, hostname FROM hosts where ipmi_address = ? LIMIT 2", m.ipmi_address.String())
+	rws, e := globSqlDB.Query("SELECT id, hostname FROM hosts where ipmi_address = ? LIMIT 2", m.ipmi_address.String())
 	if e != nil {
 		return newAppError(errInternalSqlError).log(e, "Could not get result from DB!")
 	}
@@ -86,7 +86,7 @@ func (m *baseHost) getOrCreate() *appError {
 			return newAppError(errInternalSqlError).log(rws.Err(), "Could not exec rows.Next method!")
 		}
 
-		if _,e = globSqlDB.Exec("INSERT INTO hosts (id, ipmi_address) VALUES (?, ?)", m.id, m.ipmi_address.String()); e != nil {
+		if _, e = globSqlDB.Exec("INSERT INTO hosts (id, ipmi_address) VALUES (?, ?)", m.id, m.ipmi_address.String()); e != nil {
 			return newAppError(errInternalSqlError).log(e, "Could not exec the database query!")
 		}
 
@@ -140,7 +140,7 @@ func (m *baseHost) updateOrCreate(jobId string) *appError {
 		return m.updateProperties()
 	}
 
-// TODO: refactor it. INSERT now in parseIpmi() method!
+	// TODO: refactor it. INSERT now in parseIpmi() method!
 	return m.createProperties()
 }
 

@@ -39,10 +39,10 @@ const (
 
 var (
 	// common errors:
-	errApiCommonTypeInvalid = errors.New("The request type and the link are not the same!")
-	errPuppetConfigInvalid = errors.New("Could not get valid project/project_regexps from the configuration file!")
+	errApiCommonTypeInvalid       = errors.New("The request type and the link are not the same!")
+	errPuppetConfigInvalid        = errors.New("Could not get valid project/project_regexps from the configuration file!")
 	errPuppetConfigUnknownProject = errors.New("Could not find defined project in config file! Check base/puppet/projects hash and try again!")
-	errPuppetConfigUnknownVlan = errors.New("Could not find defined vlan in config file! Check base/rsview/access/vlans array and try again!")
+	errPuppetConfigUnknownVlan    = errors.New("Could not find defined vlan in config file! Check base/rsview/access/vlans array and try again!")
 
 	// api errors:
 	apiErrorsTitle = map[uint8]string{

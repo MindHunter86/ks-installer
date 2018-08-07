@@ -1,10 +1,10 @@
 package raft
 
 import (
-	"sync"
-	"io"
-	hraft "github.com/hashicorp/raft"
 	bolt "github.com/coreos/bbolt"
+	hraft "github.com/hashicorp/raft"
+	"io"
+	"sync"
 )
 
 type Store struct {
@@ -17,7 +17,7 @@ type Store struct {
 func newStore(b *bolt.DB) *Store {
 	return &Store{
 		bdb: b,
-		m: make(map[string]string),
+		m:   make(map[string]string),
 	}
 }
 
@@ -38,16 +38,14 @@ func (m *Store) Delete(key string) {
 	defer m.Unlock()
 }
 
-
 type raftFSM Store
 
 func (m *raftFSM) Apply(l *hraft.Log) interface{} {
 	return nil
 }
-func (m *raftFSM) Snapshot() (hraft.FSMSnapshot,error) {
-	return nil,nil
+func (m *raftFSM) Snapshot() (hraft.FSMSnapshot, error) {
+	return nil, nil
 }
 func (m *raftFSM) Restore(rc io.ReadCloser) error {
 	return nil
 }
-

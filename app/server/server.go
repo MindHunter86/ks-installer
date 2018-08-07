@@ -15,7 +15,7 @@ var (
 	globSqlDB     *sql.DB
 	globQueueChan chan *queueJob
 	globRsview    *rsviewClient
-	globPuppet *puppetClient
+	globPuppet    *puppetClient
 )
 
 type App struct {
@@ -35,7 +35,7 @@ func (m *App) Construct() (*App, error) {
 
 	globPuppet = newPuppetClient()
 	if e := globPuppet.parseEndpoints(); e != nil {
-		return nil,e
+		return nil, e
 	}
 
 	return m, nil
