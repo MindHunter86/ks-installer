@@ -1,9 +1,7 @@
 package raft
 
 import "errors"
-import "io"
 import "os"
-import "sync"
 import "net"
 import "path/filepath"
 import "time"
@@ -13,6 +11,7 @@ import "bitbucket.org/mh00net/ks-installer/core/config"
 import "github.com/rs/zerolog"
 import hraft "github.com/hashicorp/raft"
 import hraftboltdb "github.com/hashicorp/raft-boltdb"
+import bolt "github.com/coreos/bbolt"
 
 
 type RaftService struct {
@@ -34,39 +33,10 @@ type RaftService struct {
 	donePipe chan struct{}
 }
 
-type Store struct {
-	sync.Mutex
-	m map[string]string
-}
-
-func (m *Store) Get(string) (string,bool) { return "",false }
-func (m *Store) Set(string, string) (bool) { return false }
-func (m *Store) Delete(string) (bool) { return false }
-
-
-type raftFSM Store
-
-func (m *raftFSM) Apply(l *hraft.Log) interface{} {
-	return nil
-}
-func (m *raftFSM) Snapshot() (hraft.FSMSnapshot,error) {
-	return nil,nil
-}
-func (m *raftFSM) Restore(rc io.ReadCloser) error {
-	return nil
-}
-
-
-func newStore() *Store {
-	return &Store{
-		m: make(map[string]string),
-	}
-}
-
-func NewService(l *zerolog.Logger) (*RaftService) {
+func NewService(l *zerolog.Logger, b *bolt.DB) (*RaftService) {
 	return &RaftService{
 		logger: l,
-		store: newStore(),
+		store: newStore(b),
 		nodes: make(map[string]*net.TCPAddr),
 		donePipe: make(chan struct{}, 1),
 	}

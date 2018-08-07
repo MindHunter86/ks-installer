@@ -7,11 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"bitbucket.org/mh00net/ks-installer/app/server"
-	"bitbucket.org/mh00net/ks-installer/core/config"
-	"bitbucket.org/mh00net/ks-installer/core/http"
-	"bitbucket.org/mh00net/ks-installer/core/sql"
-	"bitbucket.org/mh00net/ks-installer/core/raft"
+	"github.com/MindHunter86/ks-installer/app/server"
+	"github.com/MindHunter86/ks-installer/core/config"
+	"github.com/MindHunter86/ks-installer/core/http"
+	"github.com/MindHunter86/ks-installer/core/sql"
+	"github.com/MindHunter86/ks-installer/core/raft"
+	"github.com/MindHunter86/ks-installer/core/boltdb"
 
 	"github.com/rs/zerolog"
 )
@@ -20,6 +21,7 @@ type Core struct {
 	sql  sql.SqlDriver
 	http *http.HttpService
 	raft *raft.RaftService
+	bolt *boltdb.BoltDB
 
 	log *zerolog.Logger
 	cfg *config.CoreConfig
@@ -38,8 +40,12 @@ func (m *Core) Construct() (*Core, error) {
 		return nil, e
 	}
 
+	if m.bolt, e = boltdb.NewBoltDB(m.cfg, m.log); e != nil {
+		return nil,e
+	}
+
 	// internal resources configuration:
-	m.raft = raft.NewService(m.log)
+	m.raft = raft.NewService(m.log, m.bolt.GetDB())
 	if e = m.raft.Init(m.cfg); e != nil {
 		return nil, e
 	}

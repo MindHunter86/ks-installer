@@ -66,6 +66,12 @@ type CoreConfig struct {
 			Projects map[string]string
 			Endpoints map[string]map[string]string
 		}
+		Store struct {
+			Path string
+			Mode uint32
+			Lock_Timeout int
+			Read_Only, No_Sync bool
+		}
 	}
 }
 
