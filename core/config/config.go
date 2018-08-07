@@ -55,7 +55,7 @@ type CoreConfig struct {
 			Max_Pool_Size    int
 			Skip_Join_Errors bool
 			Timeouts         struct {
-				Tcp, Raft int
+				Tcp, Raft, Commit int
 			}
 			Snapshots struct {
 				Path         string

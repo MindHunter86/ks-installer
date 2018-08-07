@@ -24,7 +24,7 @@ func NewBoltDB(cnf *config.CoreConfig, l *zerolog.Logger) (*BoltDB, error) {
 	m.db, e = bolt.Open(cnf.Base.Store.Path, os.FileMode(cnf.Base.Store.Mode), &bolt.Options{
 		Timeout: time.Duration(cnf.Base.Store.Lock_Timeout) * time.Millisecond,
 		ReadOnly: cnf.Base.Store.Read_Only,
-		NoSync: cnf.Base.Store.No_Sync
+		NoSync: cnf.Base.Store.No_Sync,
 	})
 	if e != nil {
 		return nil, e

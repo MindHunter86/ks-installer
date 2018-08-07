@@ -32,16 +32,15 @@ type RaftService struct {
 	donePipe chan struct{}
 }
 
-func NewService(l *zerolog.Logger, b *bolt.DB) *RaftService {
+func NewService(l *zerolog.Logger) *RaftService {
 	return &RaftService{
 		logger:   l,
-		store:    newStore(b),
 		nodes:    make(map[string]*net.TCPAddr),
 		donePipe: make(chan struct{}, 1),
 	}
 }
 
-func (m *RaftService) Init(c *config.CoreConfig) error {
+func (m *RaftService) Init(c *config.CoreConfig, b *bolt.DB) error {
 	var e error
 	var clusterServers []hraft.Server
 
@@ -101,6 +100,8 @@ func (m *RaftService) Init(c *config.CoreConfig) error {
 	m.configuration = &hraft.Configuration{
 		Servers: clusterServers,
 	}
+
+	m.store = newStore(b, c.Base.Raft.Timeouts.Commit)
 
 	m.skipJoinErrs = c.Base.Raft.Skip_Join_Errors
 	return nil
