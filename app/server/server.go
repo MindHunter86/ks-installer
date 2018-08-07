@@ -1,7 +1,7 @@
 package server
 
 import "database/sql"
-import "bitbucket.org/mh00net/ks-installer/core/config"
+import "github.com/MindHunter86/ks-installer/core/config"
 import "github.com/rs/zerolog"
 
 // PROJECT TODO:

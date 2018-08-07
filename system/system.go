@@ -5,11 +5,11 @@ import "os"
 import "os/signal"
 import "syscall"
 
-import "bitbucket.org/mh00net/ks-installer/app/server"
-import "bitbucket.org/mh00net/ks-installer/core/config"
-import "bitbucket.org/mh00net/ks-installer/core/http"
-import "bitbucket.org/mh00net/ks-installer/core/sql"
-import "bitbucket.org/mh00net/ks-installer/core/raft"
+import "github.com/MindHunter86/ks-installer/app/server"
+import "github.com/MindHunter86/ks-installer/core/config"
+import "github.com/MindHunter86/ks-installer/core/http"
+import "github.com/MindHunter86/ks-installer/core/sql"
+import "github.com/MindHunter86/ks-installer/core/raft"
 
 import "github.com/rs/zerolog"
 

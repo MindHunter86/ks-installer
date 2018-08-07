@@ -6,7 +6,7 @@ import "net"
 import "path/filepath"
 import "time"
 
-import "bitbucket.org/mh00net/ks-installer/core/config"
+import "github.com/MindHunter86/ks-installer/core/config"
 
 import "github.com/rs/zerolog"
 import hraft "github.com/hashicorp/raft"

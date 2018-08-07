@@ -3,7 +3,7 @@ package sql
 import "time"
 import "database/sql"
 
-import "bitbucket.org/mh00net/ks-installer/core/config"
+import "github.com/MindHunter86/ks-installer/core/config"
 
 import _ "github.com/go-sql-driver/mysql"
 import mysql "github.com/go-sql-driver/mysql"

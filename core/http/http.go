@@ -4,7 +4,7 @@ import "sync"
 import "time"
 import "net/http"
 
-import "bitbucket.org/mh00net/ks-installer/core/config"
+import "github.com/MindHunter86/ks-installer/core/config"
 
 import "github.com/gorilla/mux"
 import "github.com/justinas/alice"
