@@ -45,8 +45,8 @@ func (m *Core) Construct() (*Core, error) {
 	}
 
 	// internal resources configuration:
-	m.raft = raft.NewService(m.log, m.bolt.GetDB())
-	if e = m.raft.Init(m.cfg); e != nil {
+	m.raft = raft.NewService(m.log)
+	if e = m.raft.Init(m.cfg, m.bolt.GetDB()); e != nil {
 		return nil, e
 	}
 
@@ -126,6 +126,9 @@ func (m *Core) Destruct(e *error) error {
 	// internal resources destruct:
 	if err = m.raft.DeInit(); err != nil {
 		m.log.Warn().Err(err).Msg("abnormal raft.DeInit() exit")
+	}
+	if err = m.bolt.DeInit(); err != nil {
+		m.log.Warn().Err(err).Msg("abnormal bolt.DeInit() exit")
 	}
 	//	if err = m.http.Destruct(); err != nil {
 	//		m.log.Warn().Err(err).Msg("abnormal http exit")
