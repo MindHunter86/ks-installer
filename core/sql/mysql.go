@@ -79,7 +79,8 @@ func (m *MysqlDriver) connConfigure() *mysql.Config {
 		InterpolateParams:       false,
 		MultiStatements:         true,
 		ParseTime:               true,
-		Strict:                  m.conf.Base.Mysql.Sql_Debug}
+//		Strict:                  m.conf.Base.Mysql.Sql_Debug
+	}
 }
 
 func (m *MysqlDriver) migrationsRun(sess *sql.DB) error {

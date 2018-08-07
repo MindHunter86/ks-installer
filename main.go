@@ -9,7 +9,7 @@ import "github.com/MindHunter86/ks-installer/core"
 import "github.com/MindHunter86/ks-installer/core/config"
 import "github.com/rs/zerolog"
 import cli "gopkg.in/urfave/cli.v1"
-import "gopkg.in/urfave/cli.v1/altsrc"
+// import "gopkg.in/urfave/cli.v1/altsrc"
 
 var log zerolog.Logger
 
