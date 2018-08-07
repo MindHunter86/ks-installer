@@ -3,3 +3,9 @@ extras/bin/*
 
 # exclude service configuration files:
 extras/*yml
+
+# exclude local IDE files:
+.idea/
+
+# exclude golang vendor dir:
+vendor/
