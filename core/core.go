@@ -15,6 +15,7 @@ import (
 	"github.com/MindHunter86/ks-installer/core/sql"
 
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 )
 
 type Core struct {
@@ -24,14 +25,26 @@ type Core struct {
 	bolt *boltdb.BoltDB
 
 	log *zerolog.Logger
+	conf *viper.Viper
 	cfg *config.CoreConfig
 
 	appWg sync.WaitGroup
 	app   *server.App
 }
 
-func (m *Core) SetLogger(l *zerolog.Logger) *Core    { m.log = l; return m }
+func (m *Core) SetConfigV2(v *viper.Viper) *Core {
+	m.conf = v
+	return m
+}
+
+func (m *Core) SetLogger(l *zerolog.Logger) *Core {
+	m.log = l
+	return m
+}
+
+// todo: 2DELETE
 func (m *Core) SetConfig(c *config.CoreConfig) *Core { m.cfg = c; return m }
+
 func (m *Core) Construct() (*Core, error) {
 	var e error
 
