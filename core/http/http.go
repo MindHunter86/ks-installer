@@ -4,17 +4,18 @@ import "sync"
 import "time"
 import "net/http"
 
-import "github.com/MindHunter86/ks-installer/core/config"
-
 import "github.com/gorilla/mux"
 import "github.com/justinas/alice"
 
 import "github.com/rs/zerolog"
-import "github.com/rs/zerolog/hlog"
+import (
+	"github.com/rs/zerolog/hlog"
+	"github.com/spf13/viper"
+)
 
 type HttpService struct {
 	log  *zerolog.Logger
-	conf *config.CoreConfig
+	conf *viper.Viper
 
 	httpServer *http.Server
 
@@ -22,8 +23,12 @@ type HttpService struct {
 }
 
 // http package - Public API:
-func (m *HttpService) SetConfig(c *config.CoreConfig) *HttpService { m.conf = c; return m }
-func (m *HttpService) SetLogger(l *zerolog.Logger) *HttpService    { m.log = l; return m }
+func NewHTTPService(log *zerolog.Logger, config *viper.Viper) *HttpService {
+	return &HttpService{
+		log: log,
+		conf: config,
+	}
+}
 
 func (m *HttpService) Construct(router *mux.Router) *HttpService {
 	m.done = make(chan struct{}, 1)
@@ -43,9 +48,9 @@ func (m *HttpService) Construct(router *mux.Router) *HttpService {
 
 	m.httpServer = &http.Server{
 		Handler:      chain.Then(router),
-		Addr:         m.conf.Base.Http.Listen,
-		ReadTimeout:  time.Duration(m.conf.Base.Http.Read_Timeout) * time.Millisecond,
-		WriteTimeout: time.Duration(m.conf.Base.Http.Write_Timeout) * time.Millisecond}
+		Addr:         m.conf.GetString("base.http.listen"),
+		ReadTimeout:  time.Duration(m.conf.GetInt("base.http.read_timeout")) * time.Millisecond,
+		WriteTimeout: time.Duration(m.conf.GetInt("base.http.write_timeout")) * time.Millisecond}
 
 	m.log.Debug().Msg("Http Service has been successfully configured!")
 	return m

@@ -1,91 +1,134 @@
 package config
 
 import (
-	"errors"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
+				"time"
 )
 
-type CoreConfig struct {
+
+type SysConfig struct {
 	Base struct {
-		Log_Level    string
-		Dns_Resolver string
-		Http         struct {
-			Listen, Host                string
-			Read_Timeout, Write_Timeout int
+		LogLevel string `viper:"log_level"`
+		DNSResolver string `viper:"dns_resolver"`
+		Http struct {
+			Listen, Host string
+			ReadTimeout time.Duration `viper:"read_timeout"`
+			WriteTimeout time.Duration `viper:"write_timeout"`
 		}
 		Api struct {
-			Sign_Secret string
-		}
-		Mysql struct {
-			Sql_Debug                          bool
-			Host, Username, Password, Database string
-			Migrations_Path                    string
+			SignSecret string `viper:"sign_secret"`
 		}
 		Ipmi struct {
-			Hostname_Tld string
-			CIDR_Block   string
+			HostnameTLD string `viper:"hostname_tld"`
+			CIDRBlock string `viper:"cidr_block"`
 		}
 		Queue struct {
-			Workers             int
-			Worker_Capacity     int
-			Jobs_Chain_Buffer   int
-			Max_Job_Fails       int
-			Jobs_Retry_Interval int
+			Workers int
+			WorkersCapacity int `viper:"workers_capacity"`
+			JobChanBuffer int `viper:"job_chain_buffer"`
+			JobRetryMaxFails int `viper:"job_retry_max_fails"`
+			JobRetryInterval time.Duration `viper:"job_retry_interval"`
 		}
 		Rsview struct {
-			Url    string
+			Url string
 			Client struct {
-				Timeout              int
-				Insecure_Skip_Verify bool
+				Timeout time.Duration
+				InsecureSkipVerify bool `viper:"insecure_skip_verify"`
 			}
 			Authentication struct {
 				Login, Password string
-				Test_String     string
+				TestString string `viper:"test_string"`
 			}
-			Access struct { // TODO rename it ?!
-				Vlans      []string
-				Port_Names []string
-				Jun_Names  []string
+			AllowRules struct {
+				Vlans     []string
+				PortNames []string `viper:"port_names"`
+				JunNames  []string `viper:"jun_names"`
 			}
 		}
 		Raft struct {
-			Cluster_Nodes    map[string]string
-			Inmemory_Store   bool
-			Max_Pool_Size    int
-			Skip_Join_Errors bool
-			Timeouts         struct {
-				Tcp, Raft, Commit int
+			Nodes map[string]string
+			InMemoryStore bool `viper:"in_memory_store"`
+			MaxPoolSize int `viper:"max_pool_size"`
+			SkipJoinErrors bool `viper:"skip_join_errors"`
+			Timeouts struct {
+				TCP time.Duration
+				Vote time.Duration
+				Commit time.Duration
 			}
 			Snapshots struct {
-				Path         string
-				Retain_Count int
+				Path string
+				RetainCount int `viper:"retain_count"`
 			}
 		}
 		Puppet struct {
-			Projects  map[string]string
-			Endpoints map[string]map[string]string
+			Projects map[string]string
+			Endpoints map[string]string
 		}
-		Store struct {
-			Path               string
-			Mode               uint32
-			Lock_Timeout       int
-			Read_Only, No_Sync bool
+		BoltDB struct {
+			Path string
+			Mode uint32
+			LockTimeout time.Duration `viper:"lock_timeout"`
+			ReadOnly bool `viper:"read_only"`
+			NoSync bool `viper:"no_sync"`
 		}
 	}
 }
 
-func (m *CoreConfig) Parse(cfgPath string) (*CoreConfig, error) {
-	// find and read configuration file:
-	cfgFile, e := ioutil.ReadFile(cfgPath)
-	if e != nil {
-		return nil, errors.New("Could not read configuration file! Error: " + e.Error())
-	}
+func NewSysConfig() *SysConfig {
+	return &SysConfig{}
+}
 
-	// parse configuration file (YAML synt):
-	if e := yaml.UnmarshalStrict(cfgFile, m); e != nil {
-		return nil, errors.New("Could not parse configuration file! Error: " + e.Error())
-	}
+func NewSysConfigWithDefaults() *SysConfig {
+	return new(SysConfig).SetDefaults()
+}
 
-	return m, nil
+func (m *SysConfig) SetDefaults() *SysConfig {
+	m.Base.LogLevel = "warning"
+	m.Base.DNSResolver = ""
+
+	m.Base.Http.Listen = "127.0.0.1:8080"
+	m.Base.Http.Host = "ks-installer.example.com"
+	m.Base.Http.ReadTimeout = 10000 * time.Millisecond
+	m.Base.Http.WriteTimeout = 10000 * time.Millisecond
+
+	m.Base.Api.SignSecret = "secret"
+
+	m.Base.Ipmi.HostnameTLD = "ipmi"
+	m.Base.Ipmi.CIDRBlock = "10.0.0.0/8"
+
+	m.Base.Queue.Workers = 1
+	m.Base.Queue.WorkersCapacity = 10
+	m.Base.Queue.JobChanBuffer = 10
+	m.Base.Queue.JobRetryMaxFails = 1
+	m.Base.Queue.JobRetryInterval = 5
+
+	m.Base.Rsview.Url = "https://example.com"
+	m.Base.Rsview.Client.Timeout = 1 * time.Second
+	m.Base.Rsview.Client.InsecureSkipVerify = false
+	m.Base.Rsview.Authentication.Login = "ks-installer"
+	m.Base.Rsview.Authentication.Password = "1234"
+	m.Base.Rsview.Authentication.TestString = "only include ports which are Down"
+	m.Base.Rsview.AllowRules.Vlans = []string{}
+	m.Base.Rsview.AllowRules.PortNames = []string{}
+	m.Base.Rsview.AllowRules.JunNames = []string{}
+
+	m.Base.Raft.Nodes = map[string]string{}
+	m.Base.Raft.InMemoryStore = false
+	m.Base.Raft.MaxPoolSize = 9
+	m.Base.Raft.SkipJoinErrors = false
+	m.Base.Raft.Snapshots.Path = "./raft.db"
+	m.Base.Raft.Snapshots.RetainCount = 5
+	m.Base.Raft.Timeouts.TCP = 10000 * time.Millisecond
+	m.Base.Raft.Timeouts.Vote = 10000 * time.Millisecond
+	m.Base.Raft.Timeouts.Commit = 10000 * time.Millisecond
+
+	m.Base.BoltDB.Path = "./data.db"
+	m.Base.BoltDB.Mode = uint32(0600)
+	m.Base.BoltDB.LockTimeout = 5000 * time.Millisecond
+	m.Base.BoltDB.ReadOnly = false
+	m.Base.BoltDB.NoSync = false
+
+	m.Base.Puppet.Endpoints = map[string]string{}
+	m.Base.Puppet.Projects = map[string]string{}
+
+	return m
 }

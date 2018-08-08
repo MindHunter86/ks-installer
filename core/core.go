@@ -48,27 +48,30 @@ func (m *Core) SetConfig(c *config.CoreConfig) *Core { m.cfg = c; return m }
 func (m *Core) Construct() (*Core, error) {
 	var e error
 
-	// application configuration:
-	if m.app, e = new(server.App).SetLogger(m.log).SetConfig(m.cfg).Construct(); e != nil {
-		return nil, e
-	}
-
+	// app database initialization:
 	if m.bolt, e = boltdb.NewBoltDB(m.cfg, m.log); e != nil {
 		return nil, e
 	}
 
-	// internal resources configuration:
+	// application initialization:
+	if m.app, e = server.NewApp(m.log, m.conf, m.bolt).Construct(); e != nil {
+		return nil, e
+	}
+
+	// raft consensus proto initialization:
 	m.raft = raft.NewService(m.log)
 	if e = m.raft.Init(m.cfg, m.bolt.GetDB()); e != nil {
 		return nil, e
 	}
 
+	// http service initialization:
+	m.http = http.NewHTTPService(m.log, m.conf).Construct(server.NewApiController())
+
+	// todo: 2DELETE
 	//	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
 	//		return nil, e
 	//	}
 	//	m.app.SetSqlDb(m.sql.GetRawDBSession())
-
-	//	m.http = new(http.HttpService).SetConfig(m.cfg).SetLogger(m.log).Construct(server.NewApiController())
 
 	return m, nil
 }

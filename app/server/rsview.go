@@ -72,10 +72,10 @@ func newRsviewClient() (*rsviewClient, *appError) {
 
 	var rcl = &rsviewClient{
 		httpClient: &http.Client{
-			Timeout: time.Duration(globConfig.Base.Rsview.Client.Timeout) * time.Second,
+			Timeout: globConfig.GetDuration("base.rsview.client.timeout") * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: globConfig.Base.Rsview.Client.Insecure_Skip_Verify},
+					InsecureSkipVerify: globConfig.GetBool("base.rsview.client.insecure_skip_verify")},
 			},
 		},
 	}
@@ -86,8 +86,8 @@ func newRsviewClient() (*rsviewClient, *appError) {
 	}
 
 	rq.SetBasicAuth(
-		globConfig.Base.Rsview.Authentication.Login,
-		globConfig.Base.Rsview.Authentication.Password)
+		globConfig.GetString("base.rsview.authentication.login"),
+		globConfig.GetString("base.rsview.authentication.password"))
 
 	//dump,e := httputil.DumpRequest(rq, true); if e != nil {
 	//	newApiError(errInternalCommonError).log(e, "Request dump error!")

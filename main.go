@@ -8,6 +8,8 @@ import (
 	"time"
 		"github.com/MindHunter86/ks-installer/core"
 	"github.com/spf13/viper"
+	"github.com/MindHunter86/ks-installer/core/config"
+	"github.com/mitchellh/mapstructure"
 )
 
 // import "gopkg.in/urfave/cli.v1/altsrc"
@@ -71,8 +73,18 @@ func main() {
 							return e
 						}
 
+						// unmarshal config to struct with non-default decoder options:
+						var sysConfig = config.NewSysConfigWithDefaults()
+						if e := viper.Unmarshal(&sysConfig, func(decoderConfig *mapstructure.DecoderConfig) {
+							// https://godoc.org/github.com/mitchellh/mapstructure#DecoderConfig
+							decoderConfig.ErrorUnused = false
+							decoderConfig.ZeroFields = true
+							decoderConfig.WeaklyTypedInput = true
+							decoderConfig.TagName = "viper"
+						}); e != nil { return e }
+
 						// global logger configuration:
-						switch viper.GetString("base.log_level") {
+						switch sysConfig.Base.LogLevel {
 						case "off":
 							zerolog.SetGlobalLevel(zerolog.NoLevel)
 						case "debug":

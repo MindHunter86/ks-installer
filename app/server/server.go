@@ -1,8 +1,11 @@
 package server
 
 import "database/sql"
-import "github.com/MindHunter86/ks-installer/core/config"
-import "github.com/rs/zerolog"
+import (
+	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
+		"github.com/MindHunter86/ks-installer/core/boltdb"
+)
 
 // PROJECT TODO:
 
@@ -10,9 +13,10 @@ const appVersion = "0.1"
 
 var (
 	globLogger    *zerolog.Logger
-	globConfig    *config.CoreConfig
+	globConfig    *viper.Viper
 	globApi       *apiController
 	globSqlDB     *sql.DB
+	globBoldDB    *boltdb.BoltDB
 	globQueueChan chan *queueJob
 	globRsview    *rsviewClient
 	globPuppet    *puppetClient
@@ -20,6 +24,13 @@ var (
 
 type App struct {
 	queueDp *queueDispatcher
+}
+
+func NewApp(log *zerolog.Logger, config *viper.Viper, bolt *boltdb.BoltDB) *App {
+	globConfig = config
+	globBoldDB = bolt
+	globLogger = log
+	return new(App)
 }
 
 // Common methods:
@@ -52,6 +63,4 @@ func (m *App) Destruct() error {
 }
 
 // Helper methods:
-func (m *App) SetLogger(l *zerolog.Logger) *App    { globLogger = l; return m }
-func (m *App) SetConfig(c *config.CoreConfig) *App { globConfig = c; return m }
 func (m *App) SetSqlDb(s *sql.DB) *App             { globSqlDB = s; return m }
