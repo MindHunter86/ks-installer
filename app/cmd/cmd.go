@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"fmt"
-	"os"
+		"os"
+	"log"
 )
 
 var (
@@ -19,6 +19,7 @@ var (
 		Long: "",
 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+
 			viper.SetConfigName("ks-installer")
 
 			viper.SetConfigType("yaml")
@@ -29,7 +30,7 @@ var (
 			viper.AddConfigPath("./extras")
 
 			if e := viper.ReadInConfig(); e != nil {
-				fmt.Errorf("could not parse the configuration file; error: %e", e)
+				log.Printf("could not parse the configuration file; error: %e", e)
 				os.Exit(1)
 			}
 

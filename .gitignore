@@ -3,6 +3,7 @@ extras/bin/*
 
 # exclude service configuration files:
 extras/*yml
+extras/*yaml
 
 # exclude local IDE files:
 .idea/
