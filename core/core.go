@@ -15,7 +15,6 @@ import (
 	"github.com/MindHunter86/ks-installer/core/sql"
 
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
 )
 
 type Core struct {
@@ -25,15 +24,14 @@ type Core struct {
 	bolt *boltdb.BoltDB
 
 	log *zerolog.Logger
-	conf *viper.Viper
-	cfg *config.CoreConfig
+	cfg *config.SysConfig
 
 	appWg sync.WaitGroup
 	app   *server.App
 }
 
-func (m *Core) SetConfigV2(v *viper.Viper) *Core {
-	m.conf = v
+func (m *Core) SetConfig(config *config.SysConfig) *Core {
+	m.cfg = config
 	return m
 }
 
@@ -41,9 +39,6 @@ func (m *Core) SetLogger(l *zerolog.Logger) *Core {
 	m.log = l
 	return m
 }
-
-// todo: 2DELETE
-func (m *Core) SetConfig(c *config.CoreConfig) *Core { m.cfg = c; return m }
 
 func (m *Core) Construct() (*Core, error) {
 	var e error
@@ -54,7 +49,7 @@ func (m *Core) Construct() (*Core, error) {
 	}
 
 	// application initialization:
-	if m.app, e = server.NewApp(m.log, m.conf, m.bolt).Construct(); e != nil {
+	if m.app, e = server.NewApp(m.log, m.cfg, m.bolt).Construct(); e != nil {
 		return nil, e
 	}
 
@@ -65,7 +60,7 @@ func (m *Core) Construct() (*Core, error) {
 	}
 
 	// http service initialization:
-	m.http = http.NewHTTPService(m.log, m.conf).Construct(server.NewApiController())
+	m.http = http.NewHTTPService(m.log, m.cfg).Construct(server.NewApiController())
 
 	// todo: 2DELETE
 	//	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {

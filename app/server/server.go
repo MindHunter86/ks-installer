@@ -2,9 +2,9 @@ package server
 
 import "database/sql"
 import (
+	"github.com/MindHunter86/ks-installer/core/boltdb"
+	"github.com/MindHunter86/ks-installer/core/config"
 	"github.com/rs/zerolog"
-	"github.com/spf13/viper"
-		"github.com/MindHunter86/ks-installer/core/boltdb"
 )
 
 // PROJECT TODO:
@@ -13,7 +13,7 @@ const appVersion = "0.1"
 
 var (
 	globLogger    *zerolog.Logger
-	globConfig    *viper.Viper
+	globConfig    *config.SysConfig
 	globApi       *apiController
 	globSqlDB     *sql.DB
 	globBoldDB    *boltdb.BoltDB
@@ -26,7 +26,7 @@ type App struct {
 	queueDp *queueDispatcher
 }
 
-func NewApp(log *zerolog.Logger, config *viper.Viper, bolt *boltdb.BoltDB) *App {
+func NewApp(log *zerolog.Logger, config *config.SysConfig, bolt *boltdb.BoltDB) *App {
 	globConfig = config
 	globBoldDB = bolt
 	globLogger = log
@@ -63,4 +63,4 @@ func (m *App) Destruct() error {
 }
 
 // Helper methods:
-func (m *App) SetSqlDb(s *sql.DB) *App             { globSqlDB = s; return m }
+func (m *App) SetSqlDb(s *sql.DB) *App { globSqlDB = s; return m }

@@ -13,16 +13,20 @@ import mysql_migrate "github.com/mattes/migrate/database/mysql"
 import _ "github.com/mattes/migrate/source/file"
 
 type MysqlDriver struct {
-	conf *config.CoreConfig
+	conf *config.SysConfig
 
 	sqlSession   *sql.DB
 	sqlMigration *migrate.Migrate
 }
 
 // sql package - Public API:
-func (m *MysqlDriver) SetConfig(c *config.CoreConfig) SqlDriver { m.conf = c; return m }
-func (m *MysqlDriver) GetRawDBSession() *sql.DB                 { return m.sqlSession }
-func (m *MysqlDriver) Destruct() error                          { return m.sqlSession.Close() }
+func NewMysqlDriver(config *config.SysConfig) *MysqlDriver {
+	return &MysqlDriver{
+		conf: config,
+	}
+}
+
+func (m *MysqlDriver) GetRawDBSession() *sql.DB { return m.sqlSession }
 
 func (m *MysqlDriver) Construct() (SqlDriver, error) {
 	if sess, e := sql.Open("mysql", m.connConfigure().FormatDSN()); e == nil {
@@ -36,6 +40,10 @@ func (m *MysqlDriver) Construct() (SqlDriver, error) {
 	}
 
 	return m, m.connCreate()
+}
+
+func (m *MysqlDriver) Destruct() error {
+	return m.sqlSession.Close()
 }
 
 // sql package - Internal API:
@@ -79,7 +87,7 @@ func (m *MysqlDriver) connConfigure() *mysql.Config {
 		InterpolateParams:       false,
 		MultiStatements:         true,
 		ParseTime:               true,
-//		Strict:                  m.conf.Base.Mysql.Sql_Debug
+		//		Strict:                  m.conf.Base.Mysql.Sql_Debug
 	}
 }
 
@@ -88,7 +96,7 @@ func (m *MysqlDriver) migrationsRun(sess *sql.DB) error {
 	if e != nil {
 		return e
 	}
-	if m.sqlMigration, e = migrate.NewWithDatabaseInstance("file://"+m.conf.Base.Mysql.Migrations_Path, "mysql", driver); e != nil {
+	if m.sqlMigration, e = migrate.NewWithDatabaseInstance("file://"+m.conf.Base.Mysql.MigrationsPath, "mysql", driver); e != nil {
 		return e
 	}
 

@@ -1,14 +1,15 @@
 package raft
 
 import (
-	"github.com/coreos/bbolt"
-	hraft "github.com/hashicorp/raft"
+	"encoding/json"
+	"errors"
 	"io"
 	"sync"
-	"errors"
-	"encoding/json"
 	"time"
-	)
+
+	"github.com/coreos/bbolt"
+	hraft "github.com/hashicorp/raft"
+)
 
 const (
 	raftActSet = uint8(iota)
@@ -16,7 +17,7 @@ const (
 )
 
 var (
-	errRaftIsNotLeader = errors.New("the current node is not leader")
+	errRaftIsNotLeader     = errors.New("the current node is not leader")
 	errRaftAbnormalCommand = errors.New("abnormal command has been received")
 )
 
@@ -34,7 +35,7 @@ type (
 	raftFSM Store
 
 	raftCmd struct {
-		Act uint8
+		Act                uint8
 		Bucket, Key, Value string
 	}
 
@@ -44,11 +45,11 @@ type (
 )
 
 // Store methods:
-func newStore(b *bolt.DB, t int) *Store {
+func newStore(b *bolt.DB, t time.Duration) *Store {
 	return &Store{
-		bdb: b,
-		m:   make(map[string]string),
-		commTimeout: time.Duration(t) * time.Millisecond,
+		bdb:         b,
+		m:           make(map[string]string),
+		commTimeout: t,
 	}
 }
 
@@ -64,10 +65,10 @@ func (m *Store) Set(bucket, key, value string) error {
 	}
 
 	buf, e := json.Marshal(&raftCmd{
-		Act: raftActSet,
+		Act:    raftActSet,
 		Bucket: bucket,
-		Key: key,
-		Value: value,
+		Key:    key,
+		Value:  value,
 	})
 	if e != nil {
 		return e
@@ -83,9 +84,9 @@ func (m *Store) Del(bucket, key string) error {
 	}
 
 	buf, e := json.Marshal(&raftCmd{
-		Act: raftActDel,
+		Act:    raftActDel,
 		Bucket: bucket,
-		Key: key,
+		Key:    key,
 	})
 	if e != nil {
 		return e
@@ -118,7 +119,7 @@ func (m *raftFSM) Snapshot() (hraft.FSMSnapshot, error) {
 	defer m.RUnlock()
 
 	storeCopy := make(map[string]string)
-	for k,v := range m.m {
+	for k, v := range m.m {
 		storeCopy[k] = v
 	}
 
@@ -146,7 +147,7 @@ func (m *raftFSM) applySet(bucket, key, value string) interface{} {
 	return nil
 }
 
-func (m *raftFSM) applyDel(bucket, key string) interface {} {
+func (m *raftFSM) applyDel(bucket, key string) interface{} {
 	m.Lock()
 	defer m.Unlock()
 	delete(m.m, key)
@@ -156,7 +157,8 @@ func (m *raftFSM) applyDel(bucket, key string) interface {} {
 // fsmSnapshot methods:
 func (m *fsmSnapshot) Persist(sink hraft.SnapshotSink) error {
 	err := func() error {
-		buf, e := json.Marshal(m.store); if e != nil {
+		buf, e := json.Marshal(m.store)
+		if e != nil {
 			return e
 		}
 

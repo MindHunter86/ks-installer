@@ -166,7 +166,7 @@ func (m *apiController) httpMiddlewareAPIAuthentication(h http.Handler) http.Han
 		}
 		r.Body.Close()
 
-		mac := hmac.New(sha256.New, []byte(globConfig.Base.Api.Sign_Secret))
+		mac := hmac.New(sha256.New, []byte(globConfig.Base.Api.SignSecret))
 		macSize, e := mac.Write(bodyBuf.Bytes())
 		if !m.errorHandler(w, e, req) {
 			return

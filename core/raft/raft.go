@@ -13,6 +13,10 @@ import hraft "github.com/hashicorp/raft"
 import hraftboltdb "github.com/hashicorp/raft-boltdb"
 import bolt "github.com/coreos/bbolt"
 
+var (
+	errRaftAbnormalNodesCount = errors.New("The number of nodes can not be zero!")
+)
+
 type RaftService struct {
 	raft  *hraft.Raft
 	store *Store
@@ -40,11 +44,15 @@ func NewService(l *zerolog.Logger) *RaftService {
 	}
 }
 
-func (m *RaftService) Init(c *config.CoreConfig, b *bolt.DB) error {
+func (m *RaftService) Init(c *config.SysConfig, b *bolt.DB) error {
 	var e error
 	var clusterServers []hraft.Server
 
-	for id, ip := range c.Base.Raft.Cluster_Nodes {
+	if len(c.Base.Raft.Nodes) == 0 {
+		return errRaftAbnormalNodesCount
+	}
+
+	for id, ip := range c.Base.Raft.Nodes {
 		addr, e := net.ResolveTCPAddr("tcp", ip)
 		if e != nil {
 			m.logger.Error().Err(e).Msg("unable to build node list")
@@ -64,8 +72,8 @@ func (m *RaftService) Init(c *config.CoreConfig, b *bolt.DB) error {
 	m.transport, e = hraft.NewTCPTransport(
 		m.nodes[m.localId].String(),
 		m.nodes[m.localId],
-		c.Base.Raft.Max_Pool_Size,
-		time.Duration(c.Base.Raft.Timeouts.Tcp)*time.Millisecond,
+		c.Base.Raft.MaxPoolSize,
+		c.Base.Raft.Timeouts.TCP,
 		os.Stderr,
 	)
 	if e != nil {
@@ -74,14 +82,14 @@ func (m *RaftService) Init(c *config.CoreConfig, b *bolt.DB) error {
 
 	m.snapStore, e = hraft.NewFileSnapshotStore(
 		filepath.Dir(c.Base.Raft.Snapshots.Path),
-		c.Base.Raft.Snapshots.Retain_Count,
+		c.Base.Raft.Snapshots.RetainCount,
 		os.Stderr,
 	)
 	if e != nil {
 		return e
 	}
 
-	switch c.Base.Raft.Inmemory_Store {
+	switch c.Base.Raft.InMemoryStore {
 	case true:
 		m.logStore = hraft.NewInmemStore()
 		m.stableStore = hraft.NewInmemStore()
@@ -103,7 +111,7 @@ func (m *RaftService) Init(c *config.CoreConfig, b *bolt.DB) error {
 
 	m.store = newStore(b, c.Base.Raft.Timeouts.Commit)
 
-	m.skipJoinErrs = c.Base.Raft.Skip_Join_Errors
+	m.skipJoinErrs = c.Base.Raft.SkipJoinErrors
 	return nil
 }
 

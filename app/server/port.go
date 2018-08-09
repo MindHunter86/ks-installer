@@ -64,7 +64,7 @@ func (m *basePort) parseRsviewProperties() *appError {
 	}
 
 	// parse rsview VLANs:
-	for _, v := range globConfig.Base.Rsview.Access.Vlans {
+	for _, v := range globConfig.Base.Rsview.AllowRules.Vlans {
 		if strings.Contains(rsResult[rsviewTableVlans], v) {
 			if m.jun_vlan == 0 {
 				buf, e := strconv.ParseUint(v, 10, 16)
@@ -85,7 +85,7 @@ func (m *basePort) parseRsviewProperties() *appError {
 	}
 
 	// parse port name:
-	for _, v := range globConfig.Base.Rsview.Access.Port_Names {
+	for _, v := range globConfig.Base.Rsview.AllowRules.PortNames {
 		if strings.Contains(rsResult[rsviewTablePort], v) {
 			if m.jun_port_name == "" {
 				m.jun_port_name = rsResult[rsviewTablePort]
@@ -101,7 +101,7 @@ func (m *basePort) parseRsviewProperties() *appError {
 	}
 
 	// parse jun name:
-	for _, v := range globConfig.Base.Rsview.Access.Jun_Names {
+	for _, v := range globConfig.Base.Rsview.AllowRules.JunNames {
 		if strings.Contains(rsResult[rsviewTableHostname], v) {
 			if m.jun_name == "" {
 				m.jun_name = rsResult[rsviewTableHostname]

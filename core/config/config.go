@@ -1,42 +1,47 @@
 package config
 
 import (
-				"time"
+	"time"
 )
-
 
 type SysConfig struct {
 	Base struct {
-		LogLevel string `viper:"log_level"`
+		LogLevel    string `viper:"log_level"`
 		DNSResolver string `viper:"dns_resolver"`
-		Http struct {
+		Http        struct {
 			Listen, Host string
-			ReadTimeout time.Duration `viper:"read_timeout"`
+			ReadTimeout  time.Duration `viper:"read_timeout"`
 			WriteTimeout time.Duration `viper:"write_timeout"`
+		}
+		Mysql struct {
+			SqlDebug           bool `viper:"sql_debug"`
+			Host, Database     string
+			Username, Password string
+			MigrationsPath     string `viper:"migrations_path"`
 		}
 		Api struct {
 			SignSecret string `viper:"sign_secret"`
 		}
 		Ipmi struct {
 			HostnameTLD string `viper:"hostname_tld"`
-			CIDRBlock string `viper:"cidr_block"`
+			CIDRBlock   string `viper:"cidr_block"`
 		}
 		Queue struct {
-			Workers int
-			WorkersCapacity int `viper:"workers_capacity"`
-			JobChanBuffer int `viper:"job_chain_buffer"`
-			JobRetryMaxFails int `viper:"job_retry_max_fails"`
+			Workers          int
+			WorkersCapacity  int           `viper:"workers_capacity"`
+			JobChanBuffer    int           `viper:"job_chain_buffer"`
+			JobRetryMaxFails int           `viper:"job_retry_max_fails"`
 			JobRetryInterval time.Duration `viper:"job_retry_interval"`
 		}
 		Rsview struct {
-			Url string
+			Url    string
 			Client struct {
-				Timeout time.Duration
+				Timeout            time.Duration
 				InsecureSkipVerify bool `viper:"insecure_skip_verify"`
 			}
 			Authentication struct {
 				Login, Password string
-				TestString string `viper:"test_string"`
+				TestString      string `viper:"test_string"`
 			}
 			AllowRules struct {
 				Vlans     []string
@@ -45,30 +50,30 @@ type SysConfig struct {
 			}
 		}
 		Raft struct {
-			Nodes map[string]string
-			InMemoryStore bool `viper:"in_memory_store"`
-			MaxPoolSize int `viper:"max_pool_size"`
+			Nodes          map[string]string
+			InMemoryStore  bool `viper:"in_memory_store"`
+			MaxPoolSize    int  `viper:"max_pool_size"`
 			SkipJoinErrors bool `viper:"skip_join_errors"`
-			Timeouts struct {
-				TCP time.Duration
-				Vote time.Duration
+			Timeouts       struct {
+				TCP    time.Duration
+				Vote   time.Duration
 				Commit time.Duration
 			}
 			Snapshots struct {
-				Path string
+				Path        string
 				RetainCount int `viper:"retain_count"`
 			}
 		}
 		Puppet struct {
-			Projects map[string]string
+			Projects  map[string]string
 			Endpoints map[string]string
 		}
 		BoltDB struct {
-			Path string
-			Mode uint32
+			Path        string
+			Mode        uint32
 			LockTimeout time.Duration `viper:"lock_timeout"`
-			ReadOnly bool `viper:"read_only"`
-			NoSync bool `viper:"no_sync"`
+			ReadOnly    bool          `viper:"read_only"`
+			NoSync      bool          `viper:"no_sync"`
 		}
 	}
 }

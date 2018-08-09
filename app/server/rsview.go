@@ -1,7 +1,5 @@
 package server
 
-import "time"
-
 import "io"
 import "crypto/tls"
 
@@ -72,10 +70,10 @@ func newRsviewClient() (*rsviewClient, *appError) {
 
 	var rcl = &rsviewClient{
 		httpClient: &http.Client{
-			Timeout: globConfig.GetDuration("base.rsview.client.timeout") * time.Second,
+			Timeout: globConfig.Base.Rsview.Client.Timeout,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: globConfig.GetBool("base.rsview.client.insecure_skip_verify")},
+					InsecureSkipVerify: globConfig.Base.Rsview.Client.InsecureSkipVerify},
 			},
 		},
 	}
@@ -86,8 +84,8 @@ func newRsviewClient() (*rsviewClient, *appError) {
 	}
 
 	rq.SetBasicAuth(
-		globConfig.GetString("base.rsview.authentication.login"),
-		globConfig.GetString("base.rsview.authentication.password"))
+		globConfig.Base.Rsview.Authentication.Login,
+		globConfig.Base.Rsview.Authentication.Password)
 
 	//dump,e := httputil.DumpRequest(rq, true); if e != nil {
 	//	newApiError(errInternalCommonError).log(e, "Request dump error!")
@@ -121,7 +119,7 @@ func (m *rsviewClient) testRsviewClient(rBody io.ReadCloser) *appError {
 	var buf = bufio.NewScanner(rBody)
 
 	for buf.Scan() {
-		if strings.Contains(buf.Text(), globConfig.Base.Rsview.Authentication.Test_String) {
+		if strings.Contains(buf.Text(), globConfig.Base.Rsview.Authentication.TestString) {
 			return nil
 		}
 	}

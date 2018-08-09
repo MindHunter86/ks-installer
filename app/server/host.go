@@ -60,7 +60,7 @@ func (m *baseHost) parseIpmiAddress(ipmiIp *string) *appError {
 		return newAppError(errHostsAbnormalIp).log(nil, "Could not parse the given IP address!")
 	}
 
-	_, ipmiBlock, e := net.ParseCIDR(globConfig.Base.Ipmi.CIDR_Block)
+	_, ipmiBlock, e := net.ParseCIDR(globConfig.Base.Ipmi.CIDRBlock)
 	if e != nil {
 		return newAppError(errInternalCommonError).log(nil, "Could not parse configured ipmi CIDR block!")
 	}
@@ -108,9 +108,9 @@ func (m *baseHost) resolveIpmiHostname() *appError {
 
 	var resolver = new(net.Resolver)
 
-	if globConfig.Base.Dns_Resolver != "" {
+	if globConfig.Base.DNSResolver != "" {
 		resolver.Dial = func(ctx context.Context, network, server string) (net.Conn, error) {
-			return new(net.Dialer).DialContext(ctx, network, globConfig.Base.Dns_Resolver)
+			return new(net.Dialer).DialContext(ctx, network, globConfig.Base.DNSResolver)
 		}
 	}
 

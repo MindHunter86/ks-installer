@@ -177,7 +177,7 @@ func (m *queueJob) appendAppError(aErr *appError) *appError {
 
 	m.errors = append(m.errors, aErr.setJobId(m.id))
 
-	if len(m.errors) == globConfig.Base.Queue.Max_Job_Fails {
+	if len(m.errors) == globConfig.Base.Queue.JobRetryMaxFails {
 		globLogger.Error().Str("job_id", m.id).Str("job_action", jobActHumanDetail[m.action]).
 			Msg("The job has reached the maximum number of failures!")
 
@@ -241,8 +241,8 @@ func (m *queueJob) getHumanStateDetails() string {
 
 func newQueueDispatcher() *queueDispatcher {
 	return &queueDispatcher{
-		jobQueue: make(chan *queueJob, globConfig.Base.Queue.Jobs_Chain_Buffer),
-		pool:     make(chan chan *queueJob, globConfig.Base.Queue.Worker_Capacity),
+		jobQueue: make(chan *queueJob, globConfig.Base.Queue.JobChanBuffer),
+		pool:     make(chan chan *queueJob, globConfig.Base.Queue.WorkersCapacity),
 
 		done:       make(chan struct{}, 1),
 		workerDone: make(chan struct{}, 1),
@@ -307,7 +307,7 @@ func (m *queueDispatcher) destruct() {
 func newQueueWorker(dp *queueDispatcher) *queueWorker {
 	return &queueWorker{
 		pool:  dp.pool,
-		inbox: make(chan *queueJob, globConfig.Base.Queue.Worker_Capacity),
+		inbox: make(chan *queueJob, globConfig.Base.Queue.WorkersCapacity),
 
 		done: dp.workerDone,
 	}

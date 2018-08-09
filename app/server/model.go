@@ -142,7 +142,7 @@ func (m *hostModel) createNewHost(ipmiIp *string) *baseHost {
 		return nil
 	}
 
-	if !bytes.Equal([]byte(globConfig.Base.Ipmi.Hostname_Tld), buf.Bytes()) {
+	if !bytes.Equal([]byte(globConfig.Base.Ipmi.HostnameTLD), buf.Bytes()) {
 		m.handleError(nil, errHostsIpmiTldMismatch, "[HOST]: Top-level domain of the resolved IPMI hostname does not match the configuration!")
 		return nil
 	}

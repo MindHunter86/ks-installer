@@ -9,13 +9,13 @@ import "github.com/justinas/alice"
 
 import "github.com/rs/zerolog"
 import (
+	"github.com/MindHunter86/ks-installer/core/config"
 	"github.com/rs/zerolog/hlog"
-	"github.com/spf13/viper"
 )
 
 type HttpService struct {
 	log  *zerolog.Logger
-	conf *viper.Viper
+	conf *config.SysConfig
 
 	httpServer *http.Server
 
@@ -23,9 +23,9 @@ type HttpService struct {
 }
 
 // http package - Public API:
-func NewHTTPService(log *zerolog.Logger, config *viper.Viper) *HttpService {
+func NewHTTPService(log *zerolog.Logger, config *config.SysConfig) *HttpService {
 	return &HttpService{
-		log: log,
+		log:  log,
 		conf: config,
 	}
 }
@@ -48,9 +48,9 @@ func (m *HttpService) Construct(router *mux.Router) *HttpService {
 
 	m.httpServer = &http.Server{
 		Handler:      chain.Then(router),
-		Addr:         m.conf.GetString("base.http.listen"),
-		ReadTimeout:  time.Duration(m.conf.GetInt("base.http.read_timeout")) * time.Millisecond,
-		WriteTimeout: time.Duration(m.conf.GetInt("base.http.write_timeout")) * time.Millisecond}
+		Addr:         m.conf.Base.Http.Listen,
+		ReadTimeout:  m.conf.Base.Http.ReadTimeout,
+		WriteTimeout: m.conf.Base.Http.WriteTimeout}
 
 	m.log.Debug().Msg("Http Service has been successfully configured!")
 	return m

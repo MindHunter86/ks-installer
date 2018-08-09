@@ -23,38 +23,38 @@ type System struct {
 	logger *zerolog.Logger
 }
 
-func New() *System                 {}
-func (m *System) Init() error      { return nil }
-func (m *System) Bootstrap() error { return nil }
-func (m *System) DeInit()          {}
-
 type Core struct {
 	sql  sql.SqlDriver
 	http *http.HttpService
 	raft *raft.RaftService
 
 	log *zerolog.Logger
-	cfg *config.CoreConfig
+	cfg *config.SysConfig
 
 	appWg sync.WaitGroup
 	app   *server.App
 }
 
-func (m *Core) SetLogger(l *zerolog.Logger) *Core    { m.log = l; return m }
-func (m *Core) SetConfig(c *config.CoreConfig) *Core { m.cfg = c; return m }
+func (m *Core) SetLogger(l *zerolog.Logger) *Core { m.log = l; return m }
+
+func (m *Core) SetConfig(config *config.SysConfig) *Core {
+	m.cfg = config
+	return m
+}
+
 func (m *Core) Construct() (*Core, error) {
-	var e error
+	//	var e error
 
 	// application configuration:
-	if m.app, e = new(server.App).SetLogger(m.log).SetConfig(m.cfg).Construct(); e != nil {
-		return nil, e
-	}
+	//	if m.app, e = new(server.App).SetLogger(m.log).SetConfig(m.cfg).Construct(); e != nil {
+	//		return nil, e
+	//	}
 
 	// internal resources configuration:
 	m.raft = raft.NewService(m.log)
-	if e = m.raft.Init(m.cfg); e != nil {
-		return nil, e
-	}
+	// if e = m.raft.Init(m.cfg); e != nil {
+	//	return nil, e
+	//}
 
 	//	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {
 	//		return nil, e

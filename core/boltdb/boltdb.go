@@ -1,19 +1,19 @@
 package boltdb
 
 import (
+	"os"
+
+	"github.com/MindHunter86/ks-installer/core/config"
 	bolt "github.com/coreos/bbolt"
 	"github.com/rs/zerolog"
-	"github.com/MindHunter86/ks-installer/core/config"
-	"time"
-	"os"
 )
 
 type BoltDB struct {
-	db *bolt.DB
+	db  *bolt.DB
 	log *zerolog.Logger
 }
 
-func NewBoltDB(cnf *config.CoreConfig, l *zerolog.Logger) (*BoltDB, error) {
+func NewBoltDB(cnf *config.SysConfig, l *zerolog.Logger) (*BoltDB, error) {
 	var (
 		e error
 		m *BoltDB = new(BoltDB)
@@ -21,10 +21,10 @@ func NewBoltDB(cnf *config.CoreConfig, l *zerolog.Logger) (*BoltDB, error) {
 
 	m.log = l
 
-	m.db, e = bolt.Open(cnf.Base.Store.Path, os.FileMode(cnf.Base.Store.Mode), &bolt.Options{
-		Timeout: time.Duration(cnf.Base.Store.Lock_Timeout) * time.Millisecond,
-		ReadOnly: cnf.Base.Store.Read_Only,
-		NoSync: cnf.Base.Store.No_Sync,
+	m.db, e = bolt.Open(cnf.Base.BoltDB.Path, os.FileMode(cnf.Base.BoltDB.Mode), &bolt.Options{
+		Timeout:  cnf.Base.BoltDB.LockTimeout,
+		ReadOnly: cnf.Base.BoltDB.ReadOnly,
+		NoSync:   cnf.Base.BoltDB.NoSync,
 	})
 	if e != nil {
 		return nil, e
@@ -39,11 +39,12 @@ func (m *BoltDB) GetDB() *bolt.DB {
 
 func (m *BoltDB) Init() error {
 	var (
-		e error
+		e    error
 		dbTx *bolt.Tx
 	)
 
-	dbTx, e = m.db.Begin(true); if e != nil {
+	dbTx, e = m.db.Begin(true)
+	if e != nil {
 		return e
 	}
 	defer dbTx.Rollback()
@@ -51,7 +52,7 @@ func (m *BoltDB) Init() error {
 	if dbTx.Bucket([]byte("system")) == nil {
 		m.log.Warn().Msg("Internal store is not valid! Trying to initialize new schema...")
 
-		if _,e = dbTx.CreateBucket([]byte("system")); e != nil {
+		if _, e = dbTx.CreateBucket([]byte("system")); e != nil {
 			return e
 		}
 

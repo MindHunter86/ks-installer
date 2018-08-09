@@ -3,13 +3,14 @@ package main
 import "os"
 
 import (
-	"github.com/rs/zerolog"
-	"gopkg.in/urfave/cli.v1"
 	"time"
-		"github.com/MindHunter86/ks-installer/core"
-	"github.com/spf13/viper"
+
+	"github.com/MindHunter86/ks-installer/core"
 	"github.com/MindHunter86/ks-installer/core/config"
 	"github.com/mitchellh/mapstructure"
+	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // import "gopkg.in/urfave/cli.v1/altsrc"
@@ -81,7 +82,9 @@ func main() {
 							decoderConfig.ZeroFields = true
 							decoderConfig.WeaklyTypedInput = true
 							decoderConfig.TagName = "viper"
-						}); e != nil { return e }
+						}); e != nil {
+							return e
+						}
 
 						// global logger configuration:
 						switch sysConfig.Base.LogLevel {
@@ -102,7 +105,7 @@ func main() {
 						}
 
 						// core initialization:
-						appCore, e := new(core.Core).SetLogger(&log).SetConfigV2(viper.GetViper()).Construct()
+						appCore, e := new(core.Core).SetLogger(&log).SetConfig(sysConfig).Construct()
 						if e != nil {
 							return e
 						}
