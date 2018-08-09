@@ -87,6 +87,10 @@ func (m *BaseBucket) Del(key []byte) error {
 	return m.bBucket.Delete(key)
 }
 
+func (m *BaseBucket) Get2(obj interface{}, whereKey uint8, props []string, whereKV ...map[string]string) (loadedProps map[string][]byte, e error) {
+	return
+}
+
 func (m *BaseBucket) Get(tpl interface{}, key string, where ...string) (result []interface{}, e error) {
 	boltKeys, kvPairs, e := m.marshal(tpl)
 	if e != nil {

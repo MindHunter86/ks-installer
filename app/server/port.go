@@ -10,7 +10,7 @@ type netPort struct {
 	lldpHostname string
 	junHostname  string
 	junPortName  string
-	junVlan      string
+	junVlan      string `bolt:"not_use"` // todo: add not_user for struct parsing (or ignore)
 }
 
 type basePort struct {
