@@ -4,6 +4,15 @@ import "net"
 import "strings"
 import "strconv"
 
+type netPort struct {
+	mac          string `bolt:"primary_key"`
+	attachedHost string `bolt:"foreign_key"`
+	lldpHostname string
+	junHostname  string
+	junPortName  string
+	junVlan      string
+}
+
 type basePort struct {
 	mac           net.HardwareAddr
 	jun_name      string

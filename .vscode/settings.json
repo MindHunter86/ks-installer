@@ -1,0 +1,20 @@
+{
+    "telemetry.enableCrashReporter": false,
+    "telemetry.enableTelemetry": false,
+    "terminal.integrated.confirmOnExit": true,
+    "terminal.integrated.cursorBlinking": true,
+    "terminal.integrated.copyOnSelection": true,
+    "terminal.integrated.enableBell": true,
+    "update.enableWindowsBackgroundUpdates": false,
+    "go.gopath": "/home/vkomissarov/go",
+    "go.buildOnSave": "package",
+    "go.lintOnSave": "off",
+    "go.vetOnSave": "off",
+    "zenMode.hideStatusBar": true,
+    "window.zoomLevel": -1,
+    "workbench.activityBar.visible": false,
+    "editor.minimap.enabled": false,
+    "gitlens.advanced.messages": {
+        "suppressShowKeyBindingsNotice": true
+    }
+}

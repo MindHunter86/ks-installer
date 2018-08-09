@@ -36,10 +36,6 @@ func NewBoltDB(cnf *config.SysConfig, l *zerolog.Logger) (*BoltDB, error) {
 	return m, nil
 }
 
-func (m *BoltDB) GetDB() *bolt.DB {
-	return m.db
-}
-
 func (m *BoltDB) Init() error {
 	var (
 		e    error
