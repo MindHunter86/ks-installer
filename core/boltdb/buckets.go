@@ -101,7 +101,9 @@ func (m *BaseBucket) Get(tpl interface{}, key string, where ...string) (result [
 
 		txCursor := txBucket.Cursor()
 
-		for k, v := txCursor.Seek(key)
+		for k, v := txCursor.Seek(key); k != nil && bytes.Contains(k, []byte(key); k, v = txCursor.Next() {
+			append(result, &)
+		}
 		
 	})
 
