@@ -44,23 +44,31 @@ func (m *Core) Construct() (*Core, error) {
 	var e error
 
 	// app database initialization:
+	m.log.Debug().Msg("trying to initialize boltdb")
 	if m.bolt, e = boltdb.NewBoltDB(m.cfg, m.log); e != nil {
 		return nil, e
 	}
+	m.log.Info().Msg("boltdb has been successfully initialized")
 
 	// application initialization:
+	m.log.Debug().Msg("trying to initialize app")
 	if m.app, e = server.NewApp(m.log, m.cfg, m.bolt).Construct(); e != nil {
 		return nil, e
 	}
+	m.log.Info().Msg("app has been successfully initialized")
 
 	// raft consensus proto initialization:
+	m.log.Debug().Msg("trying to initialize raft consensus proto")
 	m.raft = raft.NewService(m.log)
 	if e = m.raft.Init(m.cfg, m.bolt.GetDB()); e != nil {
 		return nil, e
 	}
+	m.log.Info().Msg("raft consensus proto has been successfully initialized")
 
 	// http service initialization:
+	m.log.Debug().Msg("trying to initialize http service")
 	m.http = http.NewHTTPService(m.log, m.cfg).Construct(server.NewApiController())
+	m.log.Info().Msg("http service has been successfully initialized")
 
 	// todo: 2DELETE
 	//	if m.sql, e = new(sql.MysqlDriver).SetConfig(m.cfg).Construct(); e != nil {

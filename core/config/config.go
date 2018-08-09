@@ -66,7 +66,7 @@ type SysConfig struct {
 		}
 		Puppet struct {
 			Projects  map[string]string
-			Endpoints map[string]string
+			Endpoints map[string]map[string]string
 		}
 		BoltDB struct {
 			Path        string
@@ -132,7 +132,7 @@ func (m *SysConfig) SetDefaults() *SysConfig {
 	m.Base.BoltDB.ReadOnly = false
 	m.Base.BoltDB.NoSync = false
 
-	m.Base.Puppet.Endpoints = map[string]string{}
+	m.Base.Puppet.Endpoints = map[string]map[string]string{}
 	m.Base.Puppet.Projects = map[string]string{}
 
 	return m

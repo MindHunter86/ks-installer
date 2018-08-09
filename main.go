@@ -76,10 +76,12 @@ func main() {
 
 						// unmarshal config to struct with non-default decoder options:
 						var sysConfig = config.NewSysConfigWithDefaults()
+						log.Debug().Str("givenPathInMain", sysConfig.Base.BoltDB.Path).Msg("")
 						if e := viper.Unmarshal(&sysConfig, func(decoderConfig *mapstructure.DecoderConfig) {
 							// https://godoc.org/github.com/mitchellh/mapstructure#DecoderConfig
 							decoderConfig.ErrorUnused = false
-							decoderConfig.ZeroFields = true
+							// not true, because: if no key present, the value will also be cleared
+							decoderConfig.ZeroFields = false
 							decoderConfig.WeaklyTypedInput = true
 							decoderConfig.TagName = "viper"
 						}); e != nil {
@@ -103,6 +105,8 @@ func main() {
 						case "panic":
 							zerolog.SetGlobalLevel(zerolog.PanicLevel)
 						}
+
+						log.Debug().Msg("zerolog has been successfully initialized")
 
 						// core initialization:
 						appCore, e := new(core.Core).SetLogger(&log).SetConfig(sysConfig).Construct()

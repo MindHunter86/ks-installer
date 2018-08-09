@@ -14,12 +14,13 @@ type BoltDB struct {
 }
 
 func NewBoltDB(cnf *config.SysConfig, l *zerolog.Logger) (*BoltDB, error) {
-	var (
-		e error
-		m *BoltDB = new(BoltDB)
-	)
+	var e error
 
-	m.log = l
+	var m = &BoltDB{
+		log: l,
+	}
+
+	m.log.Debug().Str("givenPath", cnf.Base.BoltDB.Path).Msg("")
 
 	m.db, e = bolt.Open(cnf.Base.BoltDB.Path, os.FileMode(cnf.Base.BoltDB.Mode), &bolt.Options{
 		Timeout:  cnf.Base.BoltDB.LockTimeout,
@@ -29,6 +30,8 @@ func NewBoltDB(cnf *config.SysConfig, l *zerolog.Logger) (*BoltDB, error) {
 	if e != nil {
 		return nil, e
 	}
+
+	m.log.Debug().Msg("boltdb instance has been successfully created")
 
 	return m, nil
 }

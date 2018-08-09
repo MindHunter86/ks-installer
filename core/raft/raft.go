@@ -15,6 +15,7 @@ import bolt "github.com/coreos/bbolt"
 
 var (
 	errRaftAbnormalNodesCount = errors.New("The number of nodes can not be zero!")
+	errRaftMissingLocalID     = errors.New("Could not find local ID from raft node list")
 )
 
 type RaftService struct {
@@ -58,15 +59,28 @@ func (m *RaftService) Init(c *config.SysConfig, b *bolt.DB) error {
 			m.logger.Error().Err(e).Msg("unable to build node list")
 		}
 
-		m.nodes[id] = addr
-		if m.localId == "" {
+		if id == "" {
+			id, e = os.Hostname()
+			if e != nil {
+				return e
+			}
+
 			m.localId = id
+			m.logger.Debug().Strs("localRaftNode", []string{
+				id,
+				addr.String()}).Msg("Local Raft IP parsed")
 		}
+
+		m.nodes[id] = addr
 
 		clusterServers = append(clusterServers, hraft.Server{
 			ID:      hraft.ServerID(id),
 			Address: hraft.ServerAddress(addr.String()),
 		})
+	}
+
+	if m.localId == "" {
+		return errRaftMissingLocalID
 	}
 
 	m.transport, e = hraft.NewTCPTransport(

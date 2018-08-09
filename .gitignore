@@ -5,6 +5,9 @@ extras/bin/*
 extras/*yml
 extras/*yaml
 
+# exclude test DB files:
+extras/*db
+
 # exclude local IDE files:
 .idea/
 
